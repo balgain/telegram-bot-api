@@ -23,6 +23,10 @@ WORKDIR /usr/src/telegram-bot-api
 # 将项目文件复制到容器中
 COPY . .
 
+# *** 关键修复 ***
+# 初始化并拉取项目依赖的 git 子模块 (例如 tdlib)
+RUN git submodule update --init --recursive
+
 # 创建并进入构建目录，并以 Release 模式进行编译
 RUN mkdir -p build && \
     cd build && \

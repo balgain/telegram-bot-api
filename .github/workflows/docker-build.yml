@@ -14,11 +14,13 @@ jobs:
 
     steps:
       # 第一步：检出代码
+      # *** 关键修复：添加 submodules: 'recursive' 来检出子模块 ***
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
 
       # 第二步：登录到 Docker Hub
-      # 您也可以换成 GitHub Container Registry (ghcr.io)
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
@@ -26,7 +28,6 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # 第三步：设置 Docker Buildx
-      # Buildx 是一个 Docker CLI 插件，用于扩展构建功能
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -37,5 +38,3 @@ jobs:
           context: .
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/telegram-bot-api:latest,${{ secrets.DOCKERHUB_USERNAME }}/telegram-bot-api:${{ github.sha }}
-          # 如果您想构建多平台镜像，可以取消下面的注释
-          # platforms: linux/amd64,linux/arm64

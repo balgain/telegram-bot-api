@@ -1,40 +1,60 @@
 name: Build and Push Docker Image
 
-# 触发工作流的事件
 on:
   push:
-    branches: [ "main" ] # 当 main 分支有推送时触发
-  release:
-    types: [ published ] # 当发布新版本时触发
-  workflow_dispatch: # 允许手动触发
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest # 使用最新的 ubuntu runner
-
+    runs-on: ubuntu-latest
     steps:
-      # 第一步：检出代码
-      # *** 关键修复：添加 submodules: 'recursive' 来检出子模块 ***
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           submodules: 'recursive'
-
-      # 第二步：登录到 Docker Hub
+      
+      # 读取并更新版本号
+      - name: Update version number
+        id: version
+        run: |
+          # 读取 VERSION 文件，如果没有则初始化为 0.0
+          VERSION_FILE="VERSION"
+          CURRENT_VERSION=$(cat $VERSION_FILE 2>/dev/null || echo "0.0")
+          
+          # 分割版本号，例如 0.1 -> [0, 1]
+          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+          
+          # 递增 minor 版本
+          NEW_MINOR=$((MINOR + 1))
+          NEW_VERSION="${MAJOR}.${NEW_MINOR}"
+          
+          # 保存新版本号
+          echo "$NEW_VERSION" > $VERSION_FILE
+          
+          # 提交版本号更改
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add $VERSION_FILE
+          git commit -m "Bump version to $NEW_VERSION"
+          git push
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+      
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # 第三步：设置 Docker Buildx
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-
-      # 第四步：构建并推送 Docker 镜像
+      
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/telegram-bot-api:latest,${{ secrets.DOCKERHUB_USERNAME }}/telegram-bot-api:${{ github.sha }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/telegram-bot-api:latest,${{ steps.version.outputs.version }}

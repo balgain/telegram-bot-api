@@ -1,5 +1,5 @@
 //
-// Copyright Aliaksei Levin (levlam@telegram.org), Arseny Smirnov (arseny30@gmail.com) 2014-2025
+// Copyright Aliaksei Levin (levlam@telegram.org), Arseny Smirnov (arseny30@gmail.com) 2014-2026
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -22,6 +22,7 @@
 #include "td/utils/logging.h"
 #include "td/utils/misc.h"
 #include "td/utils/PathView.h"
+#include "td/utils/port/config.h"
 #include "td/utils/port/path.h"
 #include "td/utils/Slice.h"
 #include "td/utils/SliceBuilder.h"
@@ -33,6 +34,7 @@
 #include "td/utils/utf8.h"
 
 #include <cstdlib>
+#include <utility>
 
 namespace telegram_bot_api {
 
@@ -1149,7 +1151,7 @@ class Client::JsonLiveLocation final : public td::Jsonable {
 
 class Client::JsonLocation final : public td::Jsonable {
  public:
-  JsonLocation(const td_api::location *location) : location_(location) {
+  explicit JsonLocation(const td_api::location *location) : location_(location) {
   }
   void store(td::JsonValueScope *scope) const {
     auto object = scope->enter_object();
@@ -10181,7 +10183,7 @@ td::Result<td_api::object_ptr<td_api::ButtonStyle>> Client::get_button_style(td:
   if (style == "success") {
     return make_object<td_api::buttonStyleSuccess>();
   }
-  return td::Status::Error("invalid button style specified");
+  return td::Status::Error("Invalid button style specified");
 }
 
 td::Result<td_api::object_ptr<td_api::KeyboardButtonType>> Client::get_keyboard_button_type(td::JsonObject &object) {
@@ -12587,7 +12589,7 @@ td::Result<td_api::object_ptr<td_api::inputPhoto>> Client::get_input_photo(const
     TRY_RESULT(photo, object.get_optional_string_field("photo"));
     auto input_photo = get_input_file(query, td::Slice(), photo, false);
     if (input_photo == nullptr) {
-      return td::Status::Error("photo not found");
+      return td::Status::Error("Photo not found");
     }
     return make_object<td_api::inputPhoto>(std::move(input_photo), nullptr, std::move(input_file), td::vector<int32>(),
                                            0, 0);
@@ -12848,7 +12850,7 @@ td::Result<td_api::object_ptr<td_api::InputPollMedia>> Client::get_input_poll_me
   auto r_value = json_decode(media);
   if (r_value.is_error()) {
     LOG(INFO) << "Can't parse JSON object: " << r_value.error();
-    return td::Status::Error(400, PSLICE() << "Can't parse InputPollMedia JSON object");
+    return td::Status::Error(400, "Can't parse InputPollMedia JSON object");
   }
 
   auto r_input_message_content = get_input_poll_media(query, r_value.move_as_ok(), false);
@@ -12926,7 +12928,7 @@ td::Result<td_api::object_ptr<td_api::inputPaidMedia>> Client::get_input_paid_me
     media_type = make_object<td_api::inputPaidMediaTypePhoto>(std::move(input_file));
     input_file = get_input_file(query, "photo", photo, false);
     if (input_file == nullptr) {
-      return td::Status::Error("photo not found");
+      return td::Status::Error("Photo not found");
     }
   } else if (type == "video") {
     TRY_RESULT(duration, object.get_optional_int_field("duration"));
@@ -15994,7 +15996,7 @@ td::Status Client::process_set_chat_sticker_set_query(PromisedQueryPtr &query) {
   check_chat(chat_id, AccessRights::Write, std::move(query),
              [this, sticker_set_name = sticker_set_name.str()](int64 chat_id, PromisedQueryPtr query) {
                if (get_chat_type(chat_id) != ChatType::Supergroup) {
-                 return fail_query(400, "Bad Request: method is available only for supergroups", std::move(query));
+                 return fail_query(400, "Bad Request: method is available only in supergroups", std::move(query));
                }
 
                resolve_sticker_set(
@@ -16015,7 +16017,7 @@ td::Status Client::process_delete_chat_sticker_set_query(PromisedQueryPtr &query
 
   check_chat(chat_id, AccessRights::Write, std::move(query), [this](int64 chat_id, PromisedQueryPtr query) {
     if (get_chat_type(chat_id) != ChatType::Supergroup) {
-      return fail_query(400, "Bad Request: method is available only for supergroups", std::move(query));
+      return fail_query(400, "Bad Request: method is available only in supergroups", std::move(query));
     }
 
     auto chat_info = get_chat(chat_id);
@@ -16287,7 +16289,7 @@ td::Status Client::process_promote_chat_member_query(PromisedQueryPtr &query) {
                auto chat_info = get_chat(chat_id);
                CHECK(chat_info != nullptr);
                if (chat_info->type != ChatInfo::Type::Supergroup) {
-                 return fail_query(400, "Bad Request: method is available for supergroup and channel chats only",
+                 return fail_query(400, "Bad Request: method is available only in supergroup and channel chats",
                                    std::move(query));
                }
                auto supergroup_info = get_supergroup_info(chat_info->supergroup_id);
@@ -16310,7 +16312,7 @@ td::Status Client::process_set_chat_administrator_custom_title_query(PromisedQue
   check_chat(chat_id, AccessRights::Write, std::move(query), [this, user_id](int64 chat_id, PromisedQueryPtr query) {
     auto chat_type = get_chat_type(chat_id);
     if (chat_type != ChatType::Group && chat_type != ChatType::Supergroup) {
-      return fail_query(400, "Bad Request: method is available only for groups and supergroups", std::move(query));
+      return fail_query(400, "Bad Request: method is available only in groups and supergroups", std::move(query));
     }
 
     get_chat_member(chat_id, user_id, std::move(query),
@@ -16343,7 +16345,7 @@ td::Status Client::process_set_chat_member_tag_query(PromisedQueryPtr &query) {
   check_chat(chat_id, AccessRights::Write, std::move(query), [this, user_id](int64 chat_id, PromisedQueryPtr query) {
     auto chat_type = get_chat_type(chat_id);
     if (chat_type != ChatType::Group && chat_type != ChatType::Supergroup) {
-      return fail_query(400, "Bad Request: method is available only for groups and supergroups", std::move(query));
+      return fail_query(400, "Bad Request: method is available only in groups and supergroups", std::move(query));
     }
 
     check_user_no_fail(user_id, std::move(query), [this, chat_id, user_id](PromisedQueryPtr query) {
@@ -16386,7 +16388,7 @@ td::Status Client::process_restrict_chat_member_query(PromisedQueryPtr &query) {
              [this, user_id, until_date, is_legacy = allow_legacy, permissions = std::move(permissions)](
                  int64 chat_id, PromisedQueryPtr query) mutable {
                if (get_chat_type(chat_id) != ChatType::Supergroup) {
-                 return fail_query(400, "Bad Request: method is available only for supergroups", std::move(query));
+                 return fail_query(400, "Bad Request: method is available only in supergroups", std::move(query));
                }
 
                get_chat_member(
@@ -16424,7 +16426,7 @@ td::Status Client::process_unban_chat_member_query(PromisedQueryPtr &query) {
                auto chat_info = get_chat(chat_id);
                CHECK(chat_info != nullptr);
                if (chat_info->type != ChatInfo::Type::Supergroup) {
-                 return fail_query(400, "Bad Request: method is available for supergroup and channel chats only",
+                 return fail_query(400, "Bad Request: method is available only in supergroup and channel chats",
                                    std::move(query));
                }
 
@@ -17298,10 +17300,10 @@ void Client::on_sent_message(object_ptr<td_api::message> &&message, int64 query_
   int64 chat_id = message->chat_id_;
   int64 message_id = message->id_;
 
-  MessageFullId yet_unsent_message_id{chat_id, message_id};
+  MessageFullId yet_unsent_message_full_id{chat_id, message_id};
   YetUnsentMessage yet_unsent_message;
   yet_unsent_message.send_message_query_id = query_id;
-  auto emplace_result = yet_unsent_messages_.emplace(yet_unsent_message_id, yet_unsent_message);
+  auto emplace_result = yet_unsent_messages_.emplace(yet_unsent_message_full_id, yet_unsent_message);
   CHECK(emplace_result.second);
 
   auto &query = *pending_send_message_queries_[query_id];

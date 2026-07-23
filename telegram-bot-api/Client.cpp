@@ -10492,9 +10492,9 @@ td::Result<td_api::object_ptr<td_api::ReplyMarkup>> Client::get_reply_markup(td:
     TRY_RESULT(is_persistent, object.get_optional_bool_field("is_persistent"));
     result =
         make_object<td_api::replyMarkupShowKeyboard>(std::move(rows), is_persistent, resize_keyboard, one_time_keyboard,
-                                                     is_personal, false, input_field_placeholder);
+                                                     is_personal, force_reply, input_field_placeholder);
   } else if (!inline_rows.empty()) {
-    result = make_object<td_api::replyMarkupInlineKeyboard>(std::move(inline_rows), false);
+    result = make_object<td_api::replyMarkupInlineKeyboard>(std::move(inline_rows), force_reply);
   } else if (hide_keyboard || remove_keyboard) {
     result = make_object<td_api::replyMarkupRemoveKeyboard>(is_personal);
   } else if (force_reply || force_reply_keyboard) {

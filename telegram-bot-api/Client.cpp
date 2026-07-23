@@ -14845,7 +14845,27 @@ td::Status Client::process_edit_ephemeral_message_media_query(PromisedQueryPtr &
 
 td::Status Client::process_edit_ephemeral_message_caption_query(PromisedQueryPtr &query) {
   TRY_RESULT(caption, get_caption(query.get()));
-  return do_edit_ephemeral_message(make_object<td_api::inputMessageText>(std::move(caption), nullptr, false), query);
+  auto show_caption_above_media = to_bool(query->arg("show_caption_above_media"));
+  auto chat_id = query->arg("chat_id");
+  TRY_RESULT(receiver_user_id, get_user_id(query.get(), "receiver_user_id"));
+  auto ephemeral_message_id = get_integer_arg(query.get(), "ephemeral_message_id", 0);
+  TRY_RESULT(reply_markup, get_reply_markup(query.get(), bot_user_ids_));
+
+  resolve_reply_markup_bot_usernames(
+      std::move(reply_markup), std::move(query),
+      [this, chat_id_str = chat_id.str(), receiver_user_id, ephemeral_message_id, caption = std::move(caption),
+       show_caption_above_media](object_ptr<td_api::ReplyMarkup> reply_markup, PromisedQueryPtr query) mutable {
+        check_chat(
+            chat_id_str, AccessRights::Edit, std::move(query),
+            [this, receiver_user_id, ephemeral_message_id, caption = std::move(caption), show_caption_above_media,
+             reply_markup = std::move(reply_markup)](int64 chat_id, PromisedQueryPtr query) mutable {
+              send_request(make_object<td_api::editEphemeralMessageCaption>(
+                               chat_id, receiver_user_id, ephemeral_message_id, std::move(reply_markup),
+                               std::move(caption), show_caption_above_media),
+                           td::make_unique<TdOnOkQueryCallback>(std::move(query)));
+            });
+      });
+  return td::Status::OK();
 }
 
 td::Status Client::process_edit_ephemeral_message_reply_markup_query(PromisedQueryPtr &query) {

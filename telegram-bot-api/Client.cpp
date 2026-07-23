@@ -14834,7 +14834,13 @@ td::Status Client::process_edit_message_reply_markup_query(PromisedQueryPtr &que
 }
 
 td::Status Client::process_edit_ephemeral_message_text_query(PromisedQueryPtr &query) {
-  TRY_RESULT(input_message_text, get_input_message_text(query.get()));
+  object_ptr<td_api::InputMessageContent> input_message_text;
+  if (query->has_arg("rich_message")) {
+    TRY_RESULT(input_rich_message, get_input_rich_message(query.get()));
+    input_message_text = make_object<td_api::inputMessageRichMessage>(std::move(input_rich_message), false);
+  } else {
+    TRY_RESULT_ASSIGN(input_message_text, get_input_message_text(query.get()));
+  }
   return do_edit_ephemeral_message(std::move(input_message_text), query);
 }
 

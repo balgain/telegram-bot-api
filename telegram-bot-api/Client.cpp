@@ -887,6 +887,12 @@ class Client::JsonRichText final : public td::Jsonable {
         object("anchor_name", text->anchor_name_);
         break;
       }
+      case td_api::richTextButton::ID: {
+        const auto *text = static_cast<const td_api::richTextButton *>(text_);
+        object("type", "marked");
+        object("text", JsonRichText(text->button_->text_.get(), client_));
+        break;
+      }
       default:
         UNREACHABLE();
     }
@@ -4201,6 +4207,7 @@ class Client::JsonInlineKeyboardButton final : public td::Jsonable {
     }
     switch (button_->style_->get_id()) {
       case td_api::buttonStyleDefault::ID:
+      case td_api::buttonStyleLink::ID:
         break;
       case td_api::buttonStylePrimary::ID:
         object("style", "primary");
@@ -4283,6 +4290,9 @@ class Client::JsonInlineKeyboardButton final : public td::Jsonable {
         object("copy_text", JsonCopyTextButton(type->text_));
         break;
       }
+      case td_api::inlineKeyboardButtonTypeDisabled::ID:
+        object("disabled", JsonEmptyObject());
+        break;
       default:
         UNREACHABLE();
         break;
@@ -4669,9 +4679,6 @@ void Client::JsonRichBlock::store(td::JsonValueScope *scope) const {
     }
     case td_api::pageBlockAudio::ID: {
       const auto *block = static_cast<const td_api::pageBlockAudio *>(block_);
-      if (block->audio_ == nullptr) {
-        break;
-      }
       object("type", "audio");
       object("audio", JsonAudio(block->audio_.get(), client_));
       if (block->caption_ != nullptr) {
@@ -4717,9 +4724,6 @@ void Client::JsonRichBlock::store(td::JsonValueScope *scope) const {
     }
     case td_api::pageBlockVoiceNote::ID: {
       const auto *block = static_cast<const td_api::pageBlockVoiceNote *>(block_);
-      if (block->voice_note_ == nullptr) {
-        break;
-      }
       object("type", "voice_note");
       object("voice_note", JsonVoiceNote(block->voice_note_.get(), client_));
       if (block->caption_ != nullptr) {
@@ -5291,7 +5295,7 @@ void Client::JsonMessage::store(td::JsonValueScope *scope) const {
       object("checklist_tasks_added", JsonChecklistTasksAdded(content, message_->chat_id, client_));
       break;
     }
-    case td_api::messageGiftedTon::ID:
+    case td_api::messageGiftedGrams::ID:
       break;
     case td_api::messageSuggestedPostApprovalFailed::ID: {
       auto content = static_cast<const td_api::messageSuggestedPostApprovalFailed *>(message_->content.get());
@@ -5365,6 +5369,8 @@ void Client::JsonMessage::store(td::JsonValueScope *scope) const {
     }
     case td_api::messageChatRemovedFromCommunity::ID:
       object("community_chat_removed", JsonEmptyObject());
+      break;
+    case td_api::messageChatJoinFromCommunity::ID:
       break;
     default:
       UNREACHABLE();
@@ -9222,7 +9228,7 @@ void Client::fix_reply_markup_bot_user_ids(object_ptr<td_api::ReplyMarkup> &repl
         continue;
       }
       auto login_url_button = static_cast<td_api::inlineKeyboardButtonTypeLoginUrl *>(button->type_.get());
-      if (login_url_button->id_ % 1000 != 0) {
+      if (login_url_button->id_ % 1000 != 0 || login_url_button->id_ == 0) {
         continue;
       }
       auto it = temp_to_real_bot_user_id_.find(std::abs(login_url_button->id_));
@@ -9230,7 +9236,7 @@ void Client::fix_reply_markup_bot_user_ids(object_ptr<td_api::ReplyMarkup> &repl
       auto bot_user_id = it->second;
       CHECK(bot_user_id != 0);
       if (login_url_button->id_ < 0) {
-        login_url_button->id_ = -bot_user_id;
+        login_url_button->id_ = -bot_user_id - 1;
       } else {
         login_url_button->id_ = bot_user_id;
       }
@@ -10403,7 +10409,7 @@ td::Result<td_api::object_ptr<td_api::InlineKeyboardButtonType>> Client::get_inl
       bot_user_id = user_id;
     }
     if (!request_write_access) {
-      bot_user_id *= -1;
+      bot_user_id = -bot_user_id - 1;
     }
     return make_object<td_api::inlineKeyboardButtonTypeLoginUrl>(url, bot_user_id, forward_text);
   }
@@ -10484,10 +10490,11 @@ td::Result<td_api::object_ptr<td_api::ReplyMarkup>> Client::get_reply_markup(td:
     TRY_RESULT(resize_keyboard, object.get_optional_bool_field("resize_keyboard"));
     TRY_RESULT(one_time_keyboard, object.get_optional_bool_field("one_time_keyboard"));
     TRY_RESULT(is_persistent, object.get_optional_bool_field("is_persistent"));
-    result = make_object<td_api::replyMarkupShowKeyboard>(std::move(rows), is_persistent, resize_keyboard,
-                                                          one_time_keyboard, is_personal, input_field_placeholder);
+    result =
+        make_object<td_api::replyMarkupShowKeyboard>(std::move(rows), is_persistent, resize_keyboard, one_time_keyboard,
+                                                     is_personal, false, input_field_placeholder);
   } else if (!inline_rows.empty()) {
-    result = make_object<td_api::replyMarkupInlineKeyboard>(std::move(inline_rows));
+    result = make_object<td_api::replyMarkupInlineKeyboard>(std::move(inline_rows), false);
   } else if (hide_keyboard || remove_keyboard) {
     result = make_object<td_api::replyMarkupRemoveKeyboard>(is_personal);
   } else if (force_reply || force_reply_keyboard) {
@@ -11385,7 +11392,7 @@ td::Result<td_api::object_ptr<td_api::chatAdministratorRights>> Client::get_chat
   return make_object<td_api::chatAdministratorRights>(
       can_manage_chat, can_change_info, can_post_messages, can_edit_messages, can_delete_messages, can_invite_users,
       can_restrict_members, can_pin_messages, can_manage_topics, can_promote_members, can_manage_video_chats,
-      can_post_stories, can_edit_stories, can_delete_stories, can_manage_direct_messages, can_manage_tags,
+      can_post_stories, can_edit_stories, can_delete_stories, can_manage_direct_messages, can_manage_tags, false,
       is_anonymous);
 }
 
@@ -12259,7 +12266,8 @@ td::Result<td_api::object_ptr<td_api::InputPageBlock>> Client::get_input_page_bl
     TRY_RESULT(caption, get_rich_text(object.extract_field("caption")));
     TRY_RESULT(is_bordered, object.get_optional_bool_field("is_bordered"));
     TRY_RESULT(is_striped, object.get_optional_bool_field("is_striped"));
-    return make_object<td_api::inputPageBlockTable>(std::move(caption), std::move(cells), is_bordered, is_striped);
+    return make_object<td_api::inputPageBlockTable>(std::move(caption), std::move(cells), is_bordered, is_striped,
+                                                    false);
   }
   if (type == "details") {
     TRY_RESULT(summary, get_rich_text(object.extract_field("summary")));
@@ -14493,9 +14501,9 @@ td::Status Client::process_send_message_draft_query(PromisedQueryPtr &query) {
 
   check_chat(chat_id_str, AccessRights::Write, std::move(query),
              [this, forum_topic_id, draft_id, text = std::move(text)](int64 chat_id, PromisedQueryPtr query) mutable {
-               send_request(
-                   make_object<td_api::sendTextMessageDraft>(chat_id, forum_topic_id, draft_id, std::move(text)),
-                   td::make_unique<TdOnOkQueryCallback>(std::move(query)));
+               send_request(make_object<td_api::sendTextMessageDraft>(chat_id, forum_topic_id, draft_id, false, false,
+                                                                      std::move(text)),
+                            td::make_unique<TdOnOkQueryCallback>(std::move(query)));
              });
   return td::Status::OK();
 }
@@ -14509,7 +14517,7 @@ td::Status Client::process_send_rich_message_draft_query(PromisedQueryPtr &query
   check_chat(chat_id_str, AccessRights::Write, std::move(query),
              [this, forum_topic_id, draft_id, rich_message = std::move(rich_message)](int64 chat_id,
                                                                                       PromisedQueryPtr query) mutable {
-               send_request(make_object<td_api::sendRichMessageDraft>(chat_id, forum_topic_id, draft_id,
+               send_request(make_object<td_api::sendRichMessageDraft>(chat_id, forum_topic_id, draft_id, false, false,
                                                                       std::move(rich_message)),
                             td::make_unique<TdOnOkQueryCallback>(std::move(query)));
              });
@@ -16283,7 +16291,7 @@ td::Status Client::process_promote_chat_member_query(PromisedQueryPtr &query) {
                 can_manage_chat, can_change_info, can_post_messages, can_edit_messages, can_delete_messages,
                 can_invite_users, can_restrict_members, can_pin_messages, can_manage_topics, can_promote_members,
                 can_manage_video_chats, can_post_stories, can_edit_stories, can_delete_stories,
-                can_manage_direct_messages, can_manage_tags, is_anonymous));
+                can_manage_direct_messages, can_manage_tags, false, is_anonymous));
   check_chat(chat_id, AccessRights::Write, std::move(query),
              [this, user_id, status = std::move(status), is_promotion](int64 chat_id, PromisedQueryPtr query) mutable {
                auto chat_info = get_chat(chat_id);
@@ -17268,11 +17276,12 @@ void Client::do_send_message(object_ptr<td_api::InputMessageContent> input_messa
           count++;
 
           if (receiver_user_id != 0) {
-            return send_request(make_object<td_api::sendEphemeralMessage>(
-                                    chat_id, std::move(topic_id), receiver_user_id, callback_query_id,
-                                    get_input_message_reply_to(std::move(reply_parameters)), 0, false,
-                                    std::move(reply_markup), std::move(input_message_content)),
-                                td::make_unique<TdOnSendMessageCallback>(this, chat_id, std::move(query)));
+            return send_request(
+                make_object<td_api::sendEphemeralMessage>(
+                    chat_id, std::move(topic_id), receiver_user_id, callback_query_id, false,
+                    get_input_message_reply_to(std::move(reply_parameters)), send_options->protect_content_, 0, false,
+                    std::move(reply_markup), std::move(input_message_content)),
+                td::make_unique<TdOnSendMessageCallback>(this, chat_id, std::move(query)));
           }
 
           send_request(make_object<td_api::sendMessage>(
@@ -18685,12 +18694,13 @@ bool Client::need_skip_update_message(int64 chat_id, const MessageInfo *message_
     case td_api::messageGiveawayPrizeStars::ID:
     case td_api::messagePaidMessagesRefunded::ID:
     case td_api::messageGroupCall::ID:
-    case td_api::messageGiftedTon::ID:
+    case td_api::messageGiftedGrams::ID:
     case td_api::messageSuggestBirthdate::ID:
     case td_api::messageUpgradedGiftPurchaseOffer::ID:
     case td_api::messageUpgradedGiftPurchaseOfferRejected::ID:
     case td_api::messageChatHasProtectedContentToggled::ID:
     case td_api::messageChatHasProtectedContentDisableRequested::ID:
+    case td_api::messageChatJoinFromCommunity::ID:
       return true;
     default:
       break;
@@ -18910,6 +18920,8 @@ bool Client::are_equal_inline_keyboard_buttons(const td_api::inlineKeyboardButto
       auto rhs_type = static_cast<const td_api::inlineKeyboardButtonTypeCopyText *>(rhs->type_.get());
       return lhs_type->text_ == rhs_type->text_;
     }
+    case td_api::inlineKeyboardButtonTypeDisabled::ID:
+      return true;
     default:
       UNREACHABLE();
       return false;

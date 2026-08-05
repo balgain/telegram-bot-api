@@ -9785,7 +9785,6 @@ void Client::on_update(object_ptr<td_api::Object> result) {
         } else {
           CHECK(update->value_->get_id() == td_api::optionValueInteger::ID);
           my_id_ = move_object_as<td_api::optionValueInteger>(update->value_)->value_;
-          bot_user_ids_.default_bot_user_id_ = my_id_;
         }
       }
       if (name == "group_anonymous_bot_user_id" && update->value_->get_id() == td_api::optionValueInteger::ID) {
@@ -10384,9 +10383,7 @@ td::Result<td_api::object_ptr<td_api::InlineKeyboardButtonType>> Client::get_inl
     TRY_RESULT(forward_text, login_url_object.get_optional_string_field("forward_text"));
 
     int64 bot_user_id = 0;
-    if (bot_username.empty()) {
-      bot_user_id = bot_user_ids.default_bot_user_id_;
-    } else {
+    if (!bot_username.empty()) {
       if (bot_username[0] == '@') {
         bot_username = bot_username.substr(1);
       }

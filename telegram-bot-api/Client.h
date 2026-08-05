@@ -1676,7 +1676,6 @@ class Client final : public WebhookActor::Callback {
   td::WaitFreeHashMap<int64, double> last_send_message_time_;
 
   struct BotUserIds {
-    int64 default_bot_user_id_ = 0;
     int64 cur_temp_bot_user_id_ = 1;
     td::FlatHashMap<td::string, int64> bot_user_ids_;
     td::FlatHashSet<td::string> unresolved_bot_usernames_;

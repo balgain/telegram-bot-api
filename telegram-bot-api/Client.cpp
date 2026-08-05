@@ -10425,6 +10425,10 @@ td::Result<td_api::object_ptr<td_api::InlineKeyboardButtonType>> Client::get_inl
     return make_object<td_api::inlineKeyboardButtonTypeCopyText>(copied_text);
   }
 
+  if (object.has_field("disabled")) {
+    return make_object<td_api::inlineKeyboardButtonTypeDisabled>();
+  }
+
   return td::Status::Error(400, "Text buttons are unallowed in the inline keyboard");
 }
 

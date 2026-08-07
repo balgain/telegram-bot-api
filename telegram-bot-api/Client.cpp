@@ -14497,13 +14497,16 @@ td::Status Client::process_send_message_draft_query(PromisedQueryPtr &query) {
   auto chat_id_str = query->arg("chat_id");
   auto forum_topic_id = get_forum_topic_id(query.get(), "message_thread_id");
   auto draft_id = td::to_integer<int64>(query->arg("draft_id"));
+  auto can_stop = to_bool(query->arg("can_stop"));
+  auto keep_on_stop = to_bool(query->arg("keep_on_stop"));
   TRY_RESULT(text, get_formatted_text(query->arg("text").str(), query->arg("parse_mode").str(),
                                       get_input_entities(query.get(), "entities")));
 
   check_chat(chat_id_str, AccessRights::Write, std::move(query),
-             [this, forum_topic_id, draft_id, text = std::move(text)](int64 chat_id, PromisedQueryPtr query) mutable {
-               send_request(make_object<td_api::sendTextMessageDraft>(chat_id, forum_topic_id, draft_id, false, false,
-                                                                      std::move(text)),
+             [this, forum_topic_id, draft_id, can_stop, keep_on_stop, text = std::move(text)](
+                 int64 chat_id, PromisedQueryPtr query) mutable {
+               send_request(make_object<td_api::sendTextMessageDraft>(chat_id, forum_topic_id, draft_id, can_stop,
+                                                                      keep_on_stop, std::move(text)),
                             td::make_unique<TdOnOkQueryCallback>(std::move(query)));
              });
   return td::Status::OK();
@@ -14513,13 +14516,15 @@ td::Status Client::process_send_rich_message_draft_query(PromisedQueryPtr &query
   auto chat_id_str = query->arg("chat_id");
   auto forum_topic_id = get_forum_topic_id(query.get(), "message_thread_id");
   auto draft_id = td::to_integer<int64>(query->arg("draft_id"));
+  auto can_stop = to_bool(query->arg("can_stop"));
+  auto keep_on_stop = to_bool(query->arg("keep_on_stop"));
   TRY_RESULT(rich_message, get_input_rich_message(query.get()));
 
   check_chat(chat_id_str, AccessRights::Write, std::move(query),
-             [this, forum_topic_id, draft_id, rich_message = std::move(rich_message)](int64 chat_id,
-                                                                                      PromisedQueryPtr query) mutable {
-               send_request(make_object<td_api::sendRichMessageDraft>(chat_id, forum_topic_id, draft_id, false, false,
-                                                                      std::move(rich_message)),
+             [this, forum_topic_id, draft_id, can_stop, keep_on_stop, rich_message = std::move(rich_message)](
+                 int64 chat_id, PromisedQueryPtr query) mutable {
+               send_request(make_object<td_api::sendRichMessageDraft>(chat_id, forum_topic_id, draft_id, can_stop,
+                                                                      keep_on_stop, std::move(rich_message)),
                             td::make_unique<TdOnOkQueryCallback>(std::move(query)));
              });
   return td::Status::OK();

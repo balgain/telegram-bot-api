@@ -3962,6 +3962,25 @@ class Client::JsonBotSubscriptionUpdated final : public td::Jsonable {
   const Client *client_;
 };
 
+class Client::JsonMessageGenerationStopped final : public td::Jsonable {
+ public:
+  JsonMessageGenerationStopped(const td_api::updateStopMessageDraft *update_stop_message_draft, const Client *client)
+      : update_stop_message_draft_(update_stop_message_draft), client_(client) {
+  }
+  void store(td::JsonValueScope *scope) const {
+    auto object = scope->enter_object();
+    object("chat", JsonChat(update_stop_message_draft_->chat_id_, client_));
+    if (update_stop_message_draft_->forum_topic_id_ != 0) {
+      object("message_thread_id", update_stop_message_draft_->forum_topic_id_);
+    }
+    object("draft_id", td::to_string(update_stop_message_draft_->draft_id_));
+  }
+
+ private:
+  const td_api::updateStopMessageDraft *update_stop_message_draft_;
+  const Client *client_;
+};
+
 class Client::JsonCommunityChatAdded final : public td::Jsonable {
  public:
   JsonCommunityChatAdded(const td_api::messageChatAddedToCommunity *chat_added_to_community, const Client *client)
@@ -9865,6 +9884,9 @@ void Client::on_update(object_ptr<td_api::Object> result) {
       break;
     case td_api::updateUserSubscription::ID:
       add_update_subscription(move_object_as<td_api::updateUserSubscription>(result));
+      break;
+    case td_api::updateStopMessageDraft::ID:
+      add_update_stopped_message_generation(move_object_as<td_api::updateStopMessageDraft>(result));
       break;
     case td_api::updateNewCustomEvent::ID:
       add_new_custom_event(move_object_as<td_api::updateNewCustomEvent>(result));
@@ -18066,6 +18088,8 @@ td::Slice Client::get_update_type_name(UpdateType update_type) {
       return td::Slice("guest_message");
     case UpdateType::Subscription:
       return td::Slice("subscription");
+    case UpdateType::StopMessageDraft:
+      return td::Slice("stopped_message_generation");
     default:
       UNREACHABLE();
       return td::Slice();
@@ -18445,6 +18469,12 @@ void Client::add_update_subscription(object_ptr<td_api::updateUserSubscription> 
   CHECK(query != nullptr);
   add_update(UpdateType::Subscription, JsonBotSubscriptionUpdated(query.get(), this), 86400,
              query->user_id_ + (static_cast<int64>(14) << 33));
+}
+
+void Client::add_update_stopped_message_generation(object_ptr<td_api::updateStopMessageDraft> &&update) {
+  CHECK(update != nullptr);
+  add_update(UpdateType::StopMessageDraft, JsonMessageGenerationStopped(update.get(), this), 150,
+             update->chat_id_ + (static_cast<int64>(15) << 33));
 }
 
 void Client::add_new_custom_event(object_ptr<td_api::updateNewCustomEvent> &&event) {

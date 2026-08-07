@@ -248,6 +248,7 @@ class Client final : public WebhookActor::Callback {
   class JsonManagedBotUpdated;
   class JsonCommunityChatAdded;
   class JsonBotSubscriptionUpdated;
+  class JsonMessageGenerationStopped;
   class JsonGiveawayCreated;
   class JsonGiveaway;
   class JsonGiveawayWinners;
@@ -1461,6 +1462,8 @@ class Client final : public WebhookActor::Callback {
 
   void add_update_subscription(object_ptr<td_api::updateUserSubscription> &&query);
 
+  void add_update_stopped_message_generation(object_ptr<td_api::updateStopMessageDraft> &&query);
+
   void add_new_custom_event(object_ptr<td_api::updateNewCustomEvent> &&event);
 
   void add_new_custom_query(object_ptr<td_api::updateNewCustomQuery> &&query);
@@ -1509,6 +1512,7 @@ class Client final : public WebhookActor::Callback {
     ManagedBot,
     GuestMessage,
     Subscription,
+    StopMessageDraft,
     Size
   };
 

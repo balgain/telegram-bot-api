@@ -17273,6 +17273,7 @@ void Client::do_send_message(object_ptr<td_api::InputMessageContent> input_messa
     receiver_user_id = r_receiver_user_id.move_as_ok();
   }
   auto callback_query_id = td::to_integer<int64>(query->arg("callback_query_id"));
+  auto replace_callback_query_message = to_bool(query->arg("replace_callback_query_message"));
   auto r_reply_parameters = get_reply_parameters(query.get());
   if (r_reply_parameters.is_error()) {
     return fail_query_with_error(std::move(query), 400, r_reply_parameters.error().message());
@@ -17299,9 +17300,10 @@ void Client::do_send_message(object_ptr<td_api::InputMessageContent> input_messa
       std::move(reply_markup), std::move(query),
       [this, chat_id_str = chat_id.str(), forum_topic_id, direct_messages_topic_id,
        business_connection_id = business_connection_id.str(), receiver_user_id, callback_query_id,
-       reply_parameters = std::move(reply_parameters), disable_notification, protect_content, allow_paid_broadcast,
-       effect_id, send_options = std::move(send_options), input_message_content = std::move(input_message_content)](
-          object_ptr<td_api::ReplyMarkup> reply_markup, PromisedQueryPtr query) mutable {
+       replace_callback_query_message, reply_parameters = std::move(reply_parameters), disable_notification,
+       protect_content, allow_paid_broadcast, effect_id, send_options = std::move(send_options),
+       input_message_content = std::move(input_message_content)](object_ptr<td_api::ReplyMarkup> reply_markup,
+                                                                 PromisedQueryPtr query) mutable {
         if (!business_connection_id.empty()) {
           return check_business_connection_chat_id(
               business_connection_id, chat_id_str, std::move(query),
@@ -17318,7 +17320,8 @@ void Client::do_send_message(object_ptr<td_api::InputMessageContent> input_messa
               });
         }
 
-        auto on_success = [this, receiver_user_id, callback_query_id, send_options = std::move(send_options),
+        auto on_success = [this, receiver_user_id, callback_query_id, replace_callback_query_message,
+                           send_options = std::move(send_options),
                            input_message_content = std::move(input_message_content),
                            reply_markup = std::move(reply_markup)](
                               int64 chat_id, object_ptr<td_api::MessageTopic> topic_id,
@@ -17332,7 +17335,7 @@ void Client::do_send_message(object_ptr<td_api::InputMessageContent> input_messa
           if (receiver_user_id != 0) {
             return send_request(
                 make_object<td_api::sendEphemeralMessage>(
-                    chat_id, std::move(topic_id), receiver_user_id, callback_query_id, false,
+                    chat_id, std::move(topic_id), receiver_user_id, callback_query_id, replace_callback_query_message,
                     get_input_message_reply_to(std::move(reply_parameters)), send_options->protect_content_, 0, false,
                     std::move(reply_markup), std::move(input_message_content)),
                 td::make_unique<TdOnSendMessageCallback>(this, chat_id, std::move(query)));

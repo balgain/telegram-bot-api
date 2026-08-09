@@ -10195,7 +10195,8 @@ td::Result<Client::InputReplyParameters> Client::get_reply_parameters(td::JsonVa
   return std::move(result);
 }
 
-td::Result<td_api::object_ptr<td_api::ButtonStyle>> Client::get_button_style(td::Result<td::string> r_style) {
+td::Result<td_api::object_ptr<td_api::ButtonStyle>> Client::get_button_style(td::Result<td::string> r_style,
+                                                                             bool for_rich_message) {
   TRY_RESULT(style, std::move(r_style));
   td::to_lower_inplace(style);
   if (style.empty() || style == "default") {
@@ -10209,6 +10210,9 @@ td::Result<td_api::object_ptr<td_api::ButtonStyle>> Client::get_button_style(td:
   }
   if (style == "success") {
     return make_object<td_api::buttonStyleSuccess>();
+  }
+  if (for_rich_message && style == "link") {
+    return make_object<td_api::buttonStyleLink>();
   }
   return td::Status::Error("Invalid button style specified");
 }
@@ -10318,7 +10322,7 @@ td::Result<td_api::object_ptr<td_api::keyboardButton>> Client::get_keyboard_butt
 
     TRY_RESULT(text, object.get_required_string_field("text"));
     TRY_RESULT(icon, object.get_optional_long_field("icon_custom_emoji_id"));
-    TRY_RESULT(style, get_button_style(object.get_optional_string_field("style")));
+    TRY_RESULT(style, get_button_style(object.get_optional_string_field("style"), false));
     TRY_RESULT(type, get_keyboard_button_type(object));
     return make_object<td_api::keyboardButton>(text, std::move(icon), std::move(style), std::move(type));
   }
@@ -10338,7 +10342,7 @@ td::Result<td_api::object_ptr<td_api::inlineKeyboardButton>> Client::get_inline_
   auto &object = button.get_object();
   TRY_RESULT(text, object.get_required_string_field("text"));
   TRY_RESULT(icon, object.get_optional_long_field("icon_custom_emoji_id"));
-  TRY_RESULT(style, get_button_style(object.get_optional_string_field("style")));
+  TRY_RESULT(style, get_button_style(object.get_optional_string_field("style"), false));
   TRY_RESULT(type, get_inline_keyboard_button_type(object, bot_user_ids));
   return make_object<td_api::inlineKeyboardButton>(text, std::move(icon), std::move(style), std::move(type));
 }

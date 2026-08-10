@@ -4613,6 +4613,15 @@ void Client::JsonRichBlock::store(td::JsonValueScope *scope) const {
       }
       return;
     }
+    case td_api::pageBlockExpandableBlockQuote::ID: {
+      const auto *block = static_cast<const td_api::pageBlockExpandableBlockQuote *>(block_);
+      object("type", "expandable_blockquote");
+      object("text", JsonRichText(block->text_.get(), client_));
+      if (block->credit_ != nullptr) {
+        object("credit", JsonRichText(block->credit_.get(), client_));
+      }
+      return;
+    }
     case td_api::pageBlockPullQuote::ID: {
       const auto *block = static_cast<const td_api::pageBlockPullQuote *>(block_);
       object("type", "pullquote");

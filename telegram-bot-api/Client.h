@@ -1302,7 +1302,7 @@ class Client final : public WebhookActor::Callback {
 
   static td::Result<object_ptr<td_api::StickerType>> get_sticker_type(td::Slice type);
 
-  static td::CSlice get_callback_data(const object_ptr<td_api::InlineKeyboardButtonType> &type);
+  static td::CSlice get_callback_data(const td_api::InlineKeyboardButtonType *type);
 
   static bool are_equal_suggested_post_prices(const td_api::SuggestedPostPrice *lhs,
                                               const td_api::SuggestedPostPrice *rhs);
@@ -1351,6 +1351,10 @@ class Client final : public WebhookActor::Callback {
   static void json_store_rarity(td::JsonObjectScope &object, const td_api::UpgradedGiftAttributeRarity *rarity);
 
   static void json_store_style(td::JsonObjectScope &object, const td_api::ButtonStyle *style, bool for_rich_message);
+
+  static void json_store_inline_keyboard_button_type(td::JsonObjectScope &object,
+                                                     const td_api::InlineKeyboardButtonType *button_type,
+                                                     bool for_rich_message);
 
   void json_store_message_sender(td::JsonObjectScope &object, const object_ptr<td_api::MessageSender> &sender,
                                  td::Slice user_field_name, td::Slice chat_field_name,

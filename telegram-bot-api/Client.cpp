@@ -4225,82 +4225,7 @@ class Client::JsonInlineKeyboardButton final : public td::Jsonable {
       object("icon_custom_emoji_id", td::to_string(button_->icon_custom_emoji_id_));
     }
     Client::json_store_style(object, button_->style_.get(), false);
-    switch (button_->type_->get_id()) {
-      case td_api::inlineKeyboardButtonTypeUrl::ID: {
-        auto type = static_cast<const td_api::inlineKeyboardButtonTypeUrl *>(button_->type_.get());
-        object("url", type->url_);
-        break;
-      }
-      case td_api::inlineKeyboardButtonTypeLoginUrl::ID: {
-        auto type = static_cast<const td_api::inlineKeyboardButtonTypeLoginUrl *>(button_->type_.get());
-        object("url", type->url_);
-        break;
-      }
-      case td_api::inlineKeyboardButtonTypeCallback::ID:
-      case td_api::inlineKeyboardButtonTypeCallbackWithPassword::ID: {
-        auto data = get_callback_data(button_->type_);
-        if (!td::check_utf8(data)) {
-          object("callback_data", "INVALID");
-        } else {
-          object("callback_data", data);
-        }
-        break;
-      }
-      case td_api::inlineKeyboardButtonTypeCallbackGame::ID:
-        object("callback_game", JsonEmptyObject());
-        break;
-      case td_api::inlineKeyboardButtonTypeSwitchInline::ID: {
-        auto type = static_cast<const td_api::inlineKeyboardButtonTypeSwitchInline *>(button_->type_.get());
-        switch (type->target_chat_->get_id()) {
-          case td_api::targetChatCurrent::ID:
-            object("switch_inline_query_current_chat", type->query_);
-            break;
-          case td_api::targetChatChosen::ID: {
-            auto types = static_cast<const td_api::targetChatChosen *>(type->target_chat_.get())->types_.get();
-            if (types->allow_user_chats_ && types->allow_bot_chats_ && types->allow_group_chats_ &&
-                types->allow_channel_chats_) {
-              object("switch_inline_query", type->query_);
-            } else {
-              object("switch_inline_query_chosen_chat", td::json_object([&](auto &o) {
-                       o("query", type->query_);
-                       o("allow_user_chats", td::JsonBool(types->allow_user_chats_));
-                       o("allow_bot_chats", td::JsonBool(types->allow_bot_chats_));
-                       o("allow_group_chats", td::JsonBool(types->allow_group_chats_));
-                       o("allow_channel_chats", td::JsonBool(types->allow_channel_chats_));
-                     }));
-            }
-            break;
-          }
-          default:
-            UNREACHABLE();
-        }
-        break;
-      }
-      case td_api::inlineKeyboardButtonTypeBuy::ID:
-        object("pay", td::JsonTrue());
-        break;
-      case td_api::inlineKeyboardButtonTypeUser::ID: {
-        auto type = static_cast<const td_api::inlineKeyboardButtonTypeUser *>(button_->type_.get());
-        object("url", PSLICE() << "tg://user?id=" << type->user_id_);
-        break;
-      }
-      case td_api::inlineKeyboardButtonTypeWebApp::ID: {
-        auto type = static_cast<const td_api::inlineKeyboardButtonTypeWebApp *>(button_->type_.get());
-        object("web_app", JsonWebAppInfo(type->url_));
-        break;
-      }
-      case td_api::inlineKeyboardButtonTypeCopyText::ID: {
-        auto type = static_cast<const td_api::inlineKeyboardButtonTypeCopyText *>(button_->type_.get());
-        object("copy_text", JsonCopyTextButton(type->text_));
-        break;
-      }
-      case td_api::inlineKeyboardButtonTypeDisabled::ID:
-        object("disabled", JsonEmptyObject());
-        break;
-      default:
-        UNREACHABLE();
-        break;
-    }
+    Client::json_store_inline_keyboard_button_type(object, button_->type_.get(), false);
   }
 
  private:
@@ -18074,6 +17999,94 @@ void Client::json_store_style(td::JsonObjectScope &object, const td_api::ButtonS
   }
 }
 
+void Client::json_store_inline_keyboard_button_type(td::JsonObjectScope &object,
+                                                    const td_api::InlineKeyboardButtonType *button_type,
+                                                    bool for_rich_message) {
+  CHECK(button_type != nullptr);
+  switch (button_type->get_id()) {
+    case td_api::inlineKeyboardButtonTypeUrl::ID: {
+      auto type = static_cast<const td_api::inlineKeyboardButtonTypeUrl *>(button_type);
+      object("url", type->url_);
+      break;
+    }
+    case td_api::inlineKeyboardButtonTypeLoginUrl::ID: {
+      auto type = static_cast<const td_api::inlineKeyboardButtonTypeLoginUrl *>(button_type);
+      object("url", type->url_);
+      break;
+    }
+    case td_api::inlineKeyboardButtonTypeCallback::ID:
+    case td_api::inlineKeyboardButtonTypeCallbackWithPassword::ID: {
+      auto data = get_callback_data(button_type);
+      if (!td::check_utf8(data)) {
+        object("callback_data", "INVALID");
+      } else {
+        object("callback_data", data);
+      }
+      break;
+    }
+    case td_api::inlineKeyboardButtonTypeCallbackGame::ID:
+      if (for_rich_message) {
+        LOG(ERROR) << "Receive inlineKeyboardButtonTypeCallbackGame";
+      }
+      object("callback_game", JsonEmptyObject());
+      break;
+    case td_api::inlineKeyboardButtonTypeSwitchInline::ID: {
+      auto type = static_cast<const td_api::inlineKeyboardButtonTypeSwitchInline *>(button_type);
+      switch (type->target_chat_->get_id()) {
+        case td_api::targetChatCurrent::ID:
+          object("switch_inline_query_current_chat", type->query_);
+          break;
+        case td_api::targetChatChosen::ID: {
+          auto types = static_cast<const td_api::targetChatChosen *>(type->target_chat_.get())->types_.get();
+          if (types->allow_user_chats_ && types->allow_bot_chats_ && types->allow_group_chats_ &&
+              types->allow_channel_chats_) {
+            object("switch_inline_query", type->query_);
+          } else {
+            object("switch_inline_query_chosen_chat", td::json_object([&](auto &o) {
+                     o("query", type->query_);
+                     o("allow_user_chats", td::JsonBool(types->allow_user_chats_));
+                     o("allow_bot_chats", td::JsonBool(types->allow_bot_chats_));
+                     o("allow_group_chats", td::JsonBool(types->allow_group_chats_));
+                     o("allow_channel_chats", td::JsonBool(types->allow_channel_chats_));
+                   }));
+          }
+          break;
+        }
+        default:
+          UNREACHABLE();
+      }
+      break;
+    }
+    case td_api::inlineKeyboardButtonTypeBuy::ID:
+      if (for_rich_message) {
+        LOG(ERROR) << "Receive inlineKeyboardButtonTypeBuy";
+      }
+      object("pay", td::JsonTrue());
+      break;
+    case td_api::inlineKeyboardButtonTypeUser::ID: {
+      auto type = static_cast<const td_api::inlineKeyboardButtonTypeUser *>(button_type);
+      object("url", PSLICE() << "tg://user?id=" << type->user_id_);
+      break;
+    }
+    case td_api::inlineKeyboardButtonTypeWebApp::ID: {
+      auto type = static_cast<const td_api::inlineKeyboardButtonTypeWebApp *>(button_type);
+      object("web_app", JsonWebAppInfo(type->url_));
+      break;
+    }
+    case td_api::inlineKeyboardButtonTypeCopyText::ID: {
+      auto type = static_cast<const td_api::inlineKeyboardButtonTypeCopyText *>(button_type);
+      object("copy_text", JsonCopyTextButton(type->text_));
+      break;
+    }
+    case td_api::inlineKeyboardButtonTypeDisabled::ID:
+      object("disabled", JsonEmptyObject());
+      break;
+    default:
+      UNREACHABLE();
+      break;
+  }
+}
+
 void Client::json_store_message_sender(td::JsonObjectScope &object, const object_ptr<td_api::MessageSender> &sender,
                                        td::Slice user_field_name, td::Slice chat_field_name,
                                        int64 backward_compatibility_user_id) const {
@@ -18941,13 +18954,13 @@ td::Result<td_api::object_ptr<td_api::StickerType>> Client::get_sticker_type(td:
   return td::Status::Error(400, "Unsupported sticker type specified");
 }
 
-td::CSlice Client::get_callback_data(const object_ptr<td_api::InlineKeyboardButtonType> &type) {
+td::CSlice Client::get_callback_data(const td_api::InlineKeyboardButtonType *type) {
   CHECK(type != nullptr);
   switch (type->get_id()) {
     case td_api::inlineKeyboardButtonTypeCallback::ID:
-      return static_cast<const td_api::inlineKeyboardButtonTypeCallback *>(type.get())->data_;
+      return static_cast<const td_api::inlineKeyboardButtonTypeCallback *>(type)->data_;
     case td_api::inlineKeyboardButtonTypeCallbackWithPassword::ID:
-      return static_cast<const td_api::inlineKeyboardButtonTypeCallbackWithPassword *>(type.get())->data_;
+      return static_cast<const td_api::inlineKeyboardButtonTypeCallbackWithPassword *>(type)->data_;
     default:
       UNREACHABLE();
       return td::CSlice();
@@ -19023,7 +19036,7 @@ bool Client::are_equal_inline_keyboard_buttons(const td_api::inlineKeyboardButto
     }
     case td_api::inlineKeyboardButtonTypeCallback::ID:
     case td_api::inlineKeyboardButtonTypeCallbackWithPassword::ID:
-      return get_callback_data(lhs->type_) == get_callback_data(rhs->type_);
+      return get_callback_data(lhs->type_.get()) == get_callback_data(rhs->type_.get());
     case td_api::inlineKeyboardButtonTypeCallbackGame::ID:
       return true;
     case td_api::inlineKeyboardButtonTypeSwitchInline::ID: {

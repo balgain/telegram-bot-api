@@ -4717,6 +4717,15 @@ void Client::JsonRichBlock::store(td::JsonValueScope *scope) const {
       }
       return;
     }
+    case td_api::pageBlockDocument::ID: {
+      const auto *block = static_cast<const td_api::pageBlockDocument *>(block_);
+      object("type", "document");
+      object("audio", JsonDocument(block->document_.get(), client_));
+      if (block->caption_ != nullptr) {
+        object("caption", JsonRichBlockCaption(block->caption_.get(), client_));
+      }
+      return;
+    }
     case td_api::pageBlockPhoto::ID: {
       const auto *block = static_cast<const td_api::pageBlockPhoto *>(block_);
       if (block->photo_ == nullptr) {

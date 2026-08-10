@@ -4606,6 +4606,17 @@ void Client::JsonRichBlock::store(td::JsonValueScope *scope) const {
       }
       return;
     }
+    case td_api::pageBlockButtonRow::ID: {
+      const auto *block = static_cast<const td_api::pageBlockButtonRow *>(block_);
+      object("type", "buttons");
+      object("buttons", td::json_array(block->buttons_, [client = client_](auto &button) {
+               return JsonRichMessageButton(button.get(), client);
+             }));
+      if (block->align_ != nullptr) {
+        json_store_horizontal_alignment(object, block->align_.get());
+      }
+      return;
+    }
     case td_api::pageBlockAnimation::ID: {
       const auto *block = static_cast<const td_api::pageBlockAnimation *>(block_);
       if (block->animation_ == nullptr) {
@@ -18099,6 +18110,7 @@ void Client::json_store_inline_keyboard_button_type(td::JsonObjectScope &object,
 
 void Client::json_store_horizontal_alignment(td::JsonObjectScope &object,
                                              const td_api::PageBlockHorizontalAlignment *alignment) {
+  CHECK(alignment != nullptr);
   switch (alignment->get_id()) {
     case td_api::pageBlockHorizontalAlignmentLeft::ID:
       object("align", "left");

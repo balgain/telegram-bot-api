@@ -4654,6 +4654,9 @@ void Client::JsonRichBlock::store(td::JsonValueScope *scope) const {
       if (block->is_striped_) {
         object("is_striped", td::JsonTrue());
       }
+      if (block->is_compact_) {
+        object("is_compact", td::JsonTrue());
+      }
       return;
     }
     case td_api::pageBlockDetails::ID: {

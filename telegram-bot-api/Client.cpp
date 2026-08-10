@@ -4762,6 +4762,9 @@ void Client::JsonRichBlock::store(td::JsonValueScope *scope) const {
       }
       return;
     }
+    case td_api::pageBlockUnsupported::ID:
+      object("type", "unsupported");
+      return;
     default:
       break;
   }

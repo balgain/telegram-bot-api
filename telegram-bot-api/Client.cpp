@@ -10367,12 +10367,24 @@ td::Result<td_api::object_ptr<td_api::inlineKeyboardButton>> Client::get_inline_
   TRY_RESULT(text, object.get_required_string_field("text"));
   TRY_RESULT(icon, object.get_optional_long_field("icon_custom_emoji_id"));
   TRY_RESULT(style, get_button_style(object.get_optional_string_field("style"), false));
-  TRY_RESULT(type, get_inline_keyboard_button_type(object, bot_user_ids));
+  TRY_RESULT(type, get_inline_keyboard_button_type(object, &bot_user_ids));
   return make_object<td_api::inlineKeyboardButton>(text, std::move(icon), std::move(style), std::move(type));
 }
 
+td::Result<td_api::object_ptr<td_api::inlineButton>> Client::get_inline_button(td::JsonValue &&button) {
+  if (button.type() != td::JsonValue::Type::Object) {
+    return td::Status::Error(400, "InlineButton must be an Object");
+  }
+
+  auto &object = button.get_object();
+  TRY_RESULT(text, get_rich_text(object.extract_field("text")));
+  TRY_RESULT(style, get_button_style(object.get_optional_string_field("style"), true));
+  TRY_RESULT(type, get_inline_keyboard_button_type(object, nullptr));
+  return make_object<td_api::inlineButton>(std::move(text), std::move(style), std::move(type));
+}
+
 td::Result<td_api::object_ptr<td_api::InlineKeyboardButtonType>> Client::get_inline_keyboard_button_type(
-    td::JsonObject &object, BotUserIds &bot_user_ids) {
+    td::JsonObject &object, BotUserIds *bot_user_ids) {
   {
     TRY_RESULT(url, object.get_optional_string_field("url"));
     if (!url.empty()) {
@@ -10434,6 +10446,9 @@ td::Result<td_api::object_ptr<td_api::InlineKeyboardButtonType>> Client::get_inl
 
     int64 bot_user_id = 0;
     if (!bot_username.empty()) {
+      if (bot_user_ids == nullptr) {
+        return td::Status::Error(400, "Bot username must be empty for login_url buttons in rich messages");
+      }
       if (bot_username[0] == '@') {
         bot_username = bot_username.substr(1);
       }
@@ -10445,13 +10460,13 @@ td::Result<td_api::object_ptr<td_api::InlineKeyboardButtonType>> Client::get_inl
           return td::Status::Error(400, "LoginUrl bot username is invalid");
         }
       }
-      auto &user_id = bot_user_ids.bot_user_ids_[bot_username];
+      auto &user_id = bot_user_ids->bot_user_ids_[bot_username];
       if (user_id == 0) {
-        user_id = bot_user_ids.cur_temp_bot_user_id_++;
+        user_id = bot_user_ids->cur_temp_bot_user_id_++;
         user_id *= 1000;
       }
       if (user_id % 1000 == 0) {
-        bot_user_ids.unresolved_bot_usernames_.insert(bot_username);
+        bot_user_ids->unresolved_bot_usernames_.insert(bot_username);
       }
       bot_user_id = user_id;
     }

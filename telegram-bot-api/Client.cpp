@@ -12296,8 +12296,9 @@ td::Result<td_api::object_ptr<td_api::InputPageBlock>> Client::get_input_page_bl
     TRY_RESULT(caption, get_rich_text(object.extract_field("caption")));
     TRY_RESULT(is_bordered, object.get_optional_bool_field("is_bordered"));
     TRY_RESULT(is_striped, object.get_optional_bool_field("is_striped"));
+    TRY_RESULT(is_compact, object.get_optional_bool_field("is_compact"));
     return make_object<td_api::inputPageBlockTable>(std::move(caption), std::move(cells), is_bordered, is_striped,
-                                                    false);
+                                                    is_compact);
   }
   if (type == "details") {
     TRY_RESULT(summary, get_rich_text(object.extract_field("summary")));

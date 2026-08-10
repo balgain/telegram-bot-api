@@ -4224,22 +4224,7 @@ class Client::JsonInlineKeyboardButton final : public td::Jsonable {
     if (button_->icon_custom_emoji_id_ != 0) {
       object("icon_custom_emoji_id", td::to_string(button_->icon_custom_emoji_id_));
     }
-    switch (button_->style_->get_id()) {
-      case td_api::buttonStyleDefault::ID:
-      case td_api::buttonStyleLink::ID:
-        break;
-      case td_api::buttonStylePrimary::ID:
-        object("style", "primary");
-        break;
-      case td_api::buttonStyleDanger::ID:
-        object("style", "danger");
-        break;
-      case td_api::buttonStyleSuccess::ID:
-        object("style", "success");
-        break;
-      default:
-        UNREACHABLE();
-    }
+    Client::json_store_style(object, button_->style_.get(), false);
     switch (button_->type_->get_id()) {
       case td_api::inlineKeyboardButtonTypeUrl::ID: {
         auto type = static_cast<const td_api::inlineKeyboardButtonTypeUrl *>(button_->type_.get());
@@ -18061,6 +18046,32 @@ void Client::json_store_rarity(td::JsonObjectScope &object, const td_api::Upgrad
       UNREACHABLE();
   }
   object("rarity_per_mille", rarity_per_mille);
+}
+
+void Client::json_store_style(td::JsonObjectScope &object, const td_api::ButtonStyle *style, bool for_rich_message) {
+  CHECK(style != nullptr);
+  switch (style->get_id()) {
+    case td_api::buttonStyleDefault::ID:
+      break;
+    case td_api::buttonStylePrimary::ID:
+      object("style", "primary");
+      break;
+    case td_api::buttonStyleDanger::ID:
+      object("style", "danger");
+      break;
+    case td_api::buttonStyleSuccess::ID:
+      object("style", "success");
+      break;
+    case td_api::buttonStyleLink::ID:
+      if (for_rich_message) {
+        object("style", "link");
+      } else {
+        LOG(ERROR) << "Receive buttonStyleLink";
+      }
+      break;
+    default:
+      UNREACHABLE();
+  }
 }
 
 void Client::json_store_message_sender(td::JsonObjectScope &object, const object_ptr<td_api::MessageSender> &sender,

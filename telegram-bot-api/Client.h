@@ -1350,6 +1350,8 @@ class Client final : public WebhookActor::Callback {
 
   static void json_store_rarity(td::JsonObjectScope &object, const td_api::UpgradedGiftAttributeRarity *rarity);
 
+  static void json_store_style(td::JsonObjectScope &object, const td_api::ButtonStyle *style, bool for_rich_message);
+
   void json_store_message_sender(td::JsonObjectScope &object, const object_ptr<td_api::MessageSender> &sender,
                                  td::Slice user_field_name, td::Slice chat_field_name,
                                  int64 backward_compatibility_user_id = 0) const;

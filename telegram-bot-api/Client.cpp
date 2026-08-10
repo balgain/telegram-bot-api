@@ -12280,6 +12280,11 @@ td::Result<td_api::object_ptr<td_api::InputPageBlock>> Client::get_input_page_bl
     TRY_RESULT(credit, get_rich_text(object.extract_field("credit")));
     return make_object<td_api::inputPageBlockBlockQuote>(std::move(blocks), std::move(credit));
   }
+  if (type == "expandable_blockquote") {
+    TRY_RESULT(text, get_rich_text(object.extract_field("text")));
+    TRY_RESULT(credit, get_rich_text(object.extract_field("credit")));
+    return make_object<td_api::inputPageBlockExpandableBlockQuote>(std::move(text), std::move(credit));
+  }
   if (type == "pullquote") {
     TRY_RESULT(text, get_rich_text(object.extract_field("text")));
     TRY_RESULT(credit, get_rich_text(object.extract_field("credit")));

@@ -939,19 +939,7 @@ class Client::JsonRichTableCell final : public td::Jsonable {
     if (cell_->rowspan_ > 1) {
       object("rowspan", cell_->rowspan_);
     }
-    switch (cell_->align_->get_id()) {
-      case td_api::pageBlockHorizontalAlignmentLeft::ID:
-        object("align", "left");
-        break;
-      case td_api::pageBlockHorizontalAlignmentCenter::ID:
-        object("align", "center");
-        break;
-      case td_api::pageBlockHorizontalAlignmentRight::ID:
-        object("align", "right");
-        break;
-      default:
-        UNREACHABLE();
-    }
+    json_store_horizontal_alignment(object, cell_->align_.get());
     switch (cell_->valign_->get_id()) {
       case td_api::pageBlockVerticalAlignmentTop::ID:
         object("valign", "top");
@@ -18106,6 +18094,23 @@ void Client::json_store_inline_keyboard_button_type(td::JsonObjectScope &object,
     default:
       UNREACHABLE();
       break;
+  }
+}
+
+void Client::json_store_horizontal_alignment(td::JsonObjectScope &object,
+                                             const td_api::PageBlockHorizontalAlignment *alignment) {
+  switch (alignment->get_id()) {
+    case td_api::pageBlockHorizontalAlignmentLeft::ID:
+      object("align", "left");
+      break;
+    case td_api::pageBlockHorizontalAlignmentCenter::ID:
+      object("align", "center");
+      break;
+    case td_api::pageBlockHorizontalAlignmentRight::ID:
+      object("align", "right");
+      break;
+    default:
+      UNREACHABLE();
   }
 }
 

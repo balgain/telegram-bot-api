@@ -1357,6 +1357,9 @@ class Client final : public WebhookActor::Callback {
                                                      const td_api::InlineKeyboardButtonType *button_type,
                                                      bool for_rich_message);
 
+  static void json_store_horizontal_alignment(td::JsonObjectScope &object,
+                                              const td_api::PageBlockHorizontalAlignment *alignment);
+
   void json_store_message_sender(td::JsonObjectScope &object, const object_ptr<td_api::MessageSender> &sender,
                                  td::Slice user_field_name, td::Slice chat_field_name,
                                  int64 backward_compatibility_user_id = 0) const;

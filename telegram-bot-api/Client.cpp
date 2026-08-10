@@ -12288,6 +12288,24 @@ td::Result<td_api::object_ptr<td_api::InputPageBlock>> Client::get_input_page_bl
     TRY_RESULT(caption, get_page_block_caption(object.extract_field("caption")));
     return make_object<td_api::inputPageBlockMap>(std::move(location), zoom, width, height, std::move(caption));
   }
+  if (type == "buttons") {
+    TRY_RESULT(input_buttons, object.extract_required_field("buttons", td::JsonValue::Type::Array));
+    TRY_RESULT(buttons, get_array(std::move(input_buttons), "RichMessageButton", get_inline_button));
+    object_ptr<td_api::PageBlockHorizontalAlignment> align;
+    TRY_RESULT(align_str, object.get_optional_string_field("align"));
+    if (align_str.empty()) {
+      // ok
+    } else if (align_str == "left") {
+      align = make_object<td_api::pageBlockHorizontalAlignmentLeft>();
+    } else if (align_str == "center") {
+      align = make_object<td_api::pageBlockHorizontalAlignmentCenter>();
+    } else if (align_str == "right") {
+      align = make_object<td_api::pageBlockHorizontalAlignmentRight>();
+    } else {
+      return td::Status::Error(400, "Invalid horizontal alignment specified");
+    }
+    return make_object<td_api::inputPageBlockButtonRow>(std::move(buttons), std::move(align));
+  }
   if (type != "animation" && type != "audio" && type != "document" && type != "photo" && type != "video" &&
       type != "voice_note") {
     return td::Status::Error(400, PSLICE() << "type \"" << type << "\" is unsupported");

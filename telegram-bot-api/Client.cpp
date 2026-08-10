@@ -669,6 +669,17 @@ class Client::JsonVectorEntities final : public td::Jsonable {
   const Client *client_;
 };
 
+class Client::JsonRichMessageButton final : public td::Jsonable {
+ public:
+  JsonRichMessageButton(const td_api::inlineButton *button, const Client *client) : button_(button), client_(client) {
+  }
+  void store(td::JsonValueScope *scope) const;
+
+ private:
+  const td_api::inlineButton *button_;
+  const Client *client_;
+};
+
 class Client::JsonRichBlock final : public td::Jsonable {
  public:
   JsonRichBlock(const td_api::PageBlock *block, const Client *client) : block_(block), client_(client) {
@@ -889,8 +900,8 @@ class Client::JsonRichText final : public td::Jsonable {
       }
       case td_api::richTextButton::ID: {
         const auto *text = static_cast<const td_api::richTextButton *>(text_);
-        object("type", "marked");
-        object("text", JsonRichText(text->button_->text_.get(), client_));
+        object("type", "button");
+        object("button", JsonRichMessageButton(text->button_.get(), client_));
         break;
       }
       default:
@@ -902,6 +913,13 @@ class Client::JsonRichText final : public td::Jsonable {
   const td_api::RichText *text_;
   const Client *client_;
 };
+
+void Client::JsonRichMessageButton::store(td::JsonValueScope *scope) const {
+  auto object = scope->enter_object();
+  object("text", JsonRichText(button_->text_.get(), client_));
+  json_store_style(object, button_->style_.get(), true);
+  json_store_inline_keyboard_button_type(object, button_->type_.get(), true);
+}
 
 class Client::JsonRichTableCell final : public td::Jsonable {
  public:
@@ -4224,8 +4242,8 @@ class Client::JsonInlineKeyboardButton final : public td::Jsonable {
     if (button_->icon_custom_emoji_id_ != 0) {
       object("icon_custom_emoji_id", td::to_string(button_->icon_custom_emoji_id_));
     }
-    Client::json_store_style(object, button_->style_.get(), false);
-    Client::json_store_inline_keyboard_button_type(object, button_->type_.get(), false);
+    json_store_style(object, button_->style_.get(), false);
+    json_store_inline_keyboard_button_type(object, button_->type_.get(), false);
   }
 
  private:

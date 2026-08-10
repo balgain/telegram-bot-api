@@ -12162,6 +12162,10 @@ td::Result<td_api::object_ptr<td_api::RichText>> Client::get_rich_text(td::JsonV
         TRY_RESULT(anchor_name, object.get_required_string_field("anchor_name"));
         return make_object<td_api::richTextAnchorLink>(std::move(text), anchor_name, td::string());
       }
+      if (type == "button") {
+        TRY_RESULT(button, get_inline_button(object.extract_field("button")));
+        return make_object<td_api::richTextButton>(std::move(button));
+      }
       return td::Status::Error(400, "Unsupported rich text type");
     }
     default:

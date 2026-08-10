@@ -12342,7 +12342,8 @@ td::Result<td_api::object_ptr<td_api::InputPageBlock>> Client::get_input_page_bl
     TRY_RESULT(caption, get_page_block_caption(object.extract_field("caption")));
     return make_object<td_api::inputPageBlockMap>(std::move(location), zoom, width, height, std::move(caption));
   }
-  if (type != "animation" && type != "audio" && type != "photo" && type != "video" && type != "voice_note") {
+  if (type != "animation" && type != "audio" && type != "document" && type != "photo" && type != "video" &&
+      type != "voice_note") {
     return td::Status::Error(400, PSLICE() << "type \"" << type << "\" is unsupported");
   }
   TRY_RESULT(media_field, object.extract_required_field(type, td::JsonValue::Type::Object));
@@ -12365,6 +12366,12 @@ td::Result<td_api::object_ptr<td_api::InputPageBlock>> Client::get_input_page_bl
     CHECK(input_message_content->get_id() == td_api::inputMessageAudio::ID);
     return make_object<td_api::inputPageBlockAudio>(
         std::move(static_cast<td_api::inputMessageAudio *>(input_message_content.get())->audio_), std::move(caption));
+  }
+  if (type == "document") {
+    CHECK(input_message_content->get_id() == td_api::inputMessageDocument::ID);
+    return make_object<td_api::inputPageBlockDocument>(
+        std::move(static_cast<td_api::inputMessageDocument *>(input_message_content.get())->document_),
+        std::move(caption));
   }
   if (type == "photo") {
     CHECK(input_message_content->get_id() == td_api::inputMessagePhoto::ID);
@@ -12798,9 +12805,6 @@ td::Result<td_api::object_ptr<td_api::InputMessageContent>> Client::get_input_me
     return make_object<td_api::inputMessageAudio>(std::move(input_audio), std::move(caption));
   }
   if (type == "document") {
-    if (for_rich_message) {
-      return td::Status::Error(PSLICE() << "type \"" << type << "\" is not allowed");
-    }
     TRY_RESULT(disable_content_type_detection, object.get_optional_bool_field("disable_content_type_detection"));
     return make_object<td_api::inputMessageDocument>(
         make_object<td_api::inputDocument>(std::move(input_file), std::move(input_thumbnail),

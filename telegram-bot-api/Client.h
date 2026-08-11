@@ -374,6 +374,12 @@ class Client final : public WebhookActor::Callback {
     td::string poll_option_id;
   };
 
+  struct EphemeralMessageParameters {
+    int64 receiver_user_id = 0;
+    int64 callback_query_id = 0;
+    bool replace_callback_query_message = false;
+  };
+
   struct UserInfo;
   struct ChatInfo;
   struct BotCommandScope;
@@ -522,6 +528,10 @@ class Client final : public WebhookActor::Callback {
   static td::Result<InputReplyParameters> get_reply_parameters(const Query *query);
 
   static td::Result<InputReplyParameters> get_reply_parameters(td::JsonValue &&value);
+
+  static td::Result<EphemeralMessageParameters> get_ephemeral_message_parameters(const Query *query);
+
+  static td::Result<EphemeralMessageParameters> get_ephemeral_message_parameters(td::JsonValue &&value);
 
   static td::Result<object_ptr<td_api::ButtonStyle>> get_button_style(td::Result<td::string> r_style,
                                                                       bool for_rich_message);

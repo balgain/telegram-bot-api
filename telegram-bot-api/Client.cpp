@@ -10149,6 +10149,48 @@ td::Result<Client::InputReplyParameters> Client::get_reply_parameters(td::JsonVa
   return std::move(result);
 }
 
+td::Result<Client::EphemeralMessageParameters> Client::get_ephemeral_message_parameters(const Query *query) {
+  if (!query->has_arg("ephemeral_message_parameters")) {
+    EphemeralMessageParameters result;
+    if (query->has_arg("receiver_user_id")) {
+      TRY_RESULT_ASSIGN(result.receiver_user_id, get_user_id(query, "receiver_user_id"));
+    }
+    result.callback_query_id = td::to_integer<int64>(query->arg("callback_query_id"));
+    result.replace_callback_query_message = to_bool(query->arg("replace_callback_query_message"));
+    return std::move(result);
+  }
+
+  auto ephemeral_message_parameters = query->arg("ephemeral_message_parameters");
+  if (ephemeral_message_parameters.empty()) {
+    return EphemeralMessageParameters();
+  }
+
+  LOG(INFO) << "Parsing JSON object: " << ephemeral_message_parameters;
+  auto r_value = json_decode(ephemeral_message_parameters);
+  if (r_value.is_error()) {
+    LOG(INFO) << "Can't parse JSON object: " << r_value.error();
+    return td::Status::Error(400, "Can't parse EphemeralMessageParameters JSON object");
+  }
+
+  return get_ephemeral_message_parameters(r_value.move_as_ok());
+}
+
+td::Result<Client::EphemeralMessageParameters> Client::get_ephemeral_message_parameters(td::JsonValue &&value) {
+  if (value.type() != td::JsonValue::Type::Object) {
+    return td::Status::Error(400, "Object expected as EphemeralMessageParameters");
+  }
+  auto &object = value.get_object();
+  if (object.field_count() == 0) {
+    return EphemeralMessageParameters();
+  }
+  EphemeralMessageParameters result;
+  TRY_RESULT_ASSIGN(result.receiver_user_id, object.get_required_long_field("receiver_user_id"));
+  TRY_RESULT_ASSIGN(result.callback_query_id, object.get_optional_long_field("callback_query_id"));
+  TRY_RESULT_ASSIGN(result.replace_callback_query_message,
+                    object.get_optional_bool_field("replace_callback_query_message"));
+  return std::move(result);
+}
+
 td::Result<td_api::object_ptr<td_api::ButtonStyle>> Client::get_button_style(td::Result<td::string> r_style,
                                                                              bool for_rich_message) {
   TRY_RESULT(style, std::move(r_style));
@@ -17269,16 +17311,10 @@ void Client::do_send_message(object_ptr<td_api::InputMessageContent> input_messa
   auto chat_id = query->arg("chat_id");
   auto forum_topic_id = get_forum_topic_id(query.get(), "message_thread_id");
   auto business_connection_id = query->arg("business_connection_id");
-  int64 receiver_user_id = 0;
-  if (query->has_arg("receiver_user_id")) {
-    auto r_receiver_user_id = get_user_id(query.get(), "receiver_user_id");
-    if (r_receiver_user_id.is_error()) {
-      return fail_query_with_error(std::move(query), 400, r_receiver_user_id.error().message());
-    }
-    receiver_user_id = r_receiver_user_id.move_as_ok();
+  auto r_ephemeral_message_parameters = get_ephemeral_message_parameters(query.get());
+  if (r_ephemeral_message_parameters.is_error()) {
+    return fail_query_with_error(std::move(query), 400, r_ephemeral_message_parameters.error().message());
   }
-  auto callback_query_id = td::to_integer<int64>(query->arg("callback_query_id"));
-  auto replace_callback_query_message = to_bool(query->arg("replace_callback_query_message"));
   auto r_reply_parameters = get_reply_parameters(query.get());
   if (r_reply_parameters.is_error()) {
     return fail_query_with_error(std::move(query), 400, r_reply_parameters.error().message());
@@ -17304,11 +17340,11 @@ void Client::do_send_message(object_ptr<td_api::InputMessageContent> input_messa
   resolve_reply_markup_bot_usernames(
       std::move(reply_markup), std::move(query),
       [this, chat_id_str = chat_id.str(), forum_topic_id, direct_messages_topic_id,
-       business_connection_id = business_connection_id.str(), receiver_user_id, callback_query_id,
-       replace_callback_query_message, reply_parameters = std::move(reply_parameters), disable_notification,
-       protect_content, allow_paid_broadcast, effect_id, send_options = std::move(send_options),
-       input_message_content = std::move(input_message_content)](object_ptr<td_api::ReplyMarkup> reply_markup,
-                                                                 PromisedQueryPtr query) mutable {
+       business_connection_id = business_connection_id.str(),
+       ephemeral_message_parameters = r_ephemeral_message_parameters.move_as_ok(),
+       reply_parameters = std::move(reply_parameters), disable_notification, protect_content, allow_paid_broadcast,
+       effect_id, send_options = std::move(send_options), input_message_content = std::move(input_message_content)](
+          object_ptr<td_api::ReplyMarkup> reply_markup, PromisedQueryPtr query) mutable {
         if (!business_connection_id.empty()) {
           return check_business_connection_chat_id(
               business_connection_id, chat_id_str, std::move(query),
@@ -17325,8 +17361,7 @@ void Client::do_send_message(object_ptr<td_api::InputMessageContent> input_messa
               });
         }
 
-        auto on_success = [this, receiver_user_id, callback_query_id, replace_callback_query_message,
-                           send_options = std::move(send_options),
+        auto on_success = [this, ephemeral_message_parameters, send_options = std::move(send_options),
                            input_message_content = std::move(input_message_content),
                            reply_markup = std::move(reply_markup)](
                               int64 chat_id, object_ptr<td_api::MessageTopic> topic_id,
@@ -17337,10 +17372,12 @@ void Client::do_send_message(object_ptr<td_api::InputMessageContent> input_messa
           }
           count++;
 
-          if (receiver_user_id != 0) {
+          if (ephemeral_message_parameters.receiver_user_id != 0) {
             return send_request(
                 make_object<td_api::sendEphemeralMessage>(
-                    chat_id, std::move(topic_id), receiver_user_id, callback_query_id, replace_callback_query_message,
+                    chat_id, std::move(topic_id), ephemeral_message_parameters.receiver_user_id,
+                    ephemeral_message_parameters.callback_query_id,
+                    ephemeral_message_parameters.replace_callback_query_message,
                     get_input_message_reply_to(std::move(reply_parameters)), send_options->protect_content_, 0, false,
                     std::move(reply_markup), std::move(input_message_content)),
                 td::make_unique<TdOnSendMessageCallback>(this, chat_id, std::move(query)));

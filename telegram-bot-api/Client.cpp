@@ -10466,7 +10466,7 @@ td::Result<td_api::object_ptr<td_api::InlineKeyboardButtonType>> Client::get_inl
     return make_object<td_api::inlineKeyboardButtonTypeDisabled>();
   }
 
-  return td::Status::Error(400, "Text buttons are unallowed in the inline keyboard");
+  return td::Status::Error(400, "Text buttons are not allowed in the inline keyboard");
 }
 
 td::Result<td_api::object_ptr<td_api::ReplyMarkup>> Client::get_reply_markup(const Query *query,
@@ -17212,7 +17212,7 @@ void Client::do_set_webhook(PromisedQueryPtr query, bool was_deleted) {
       return fail_query(400, "Bad Request: secret token is too long", std::move(query));
     }
     if (!td::is_base64url_characters(secret_token)) {
-      return fail_query(400, "Bad Request: secret token contains unallowed characters", std::move(query));
+      return fail_query(400, "Bad Request: secret token contains illegal characters", std::move(query));
     }
 
     if (active_webhook_set_query_) {
@@ -18356,8 +18356,8 @@ void Client::add_update_impl(UpdateType update_type, const td::VirtuallyJsonable
   last_update_creation_time_ = td::Time::now();
 
   if (((allowed_update_types_ >> static_cast<int32>(update_type)) & 1) == 0) {
-    LOG(DEBUG) << "Skip unallowed update of the type " << static_cast<int32>(update_type) << ", allowed update mask is "
-               << allowed_update_types_;
+    LOG(DEBUG) << "Skip disallowed update of the type " << static_cast<int32>(update_type)
+               << ", allowed update mask is " << allowed_update_types_;
     return;
   }
 

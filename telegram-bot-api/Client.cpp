@@ -4260,9 +4260,12 @@ class Client::JsonReplyMarkup final : public td::Jsonable {
   }
   void store(td::JsonValueScope *scope) const {
     CHECK(reply_markup_->get_id() == td_api::replyMarkupInlineKeyboard::ID);
+    auto inline_reply_markup = static_cast<const td_api::replyMarkupInlineKeyboard *>(reply_markup_);
     auto object = scope->enter_object();
-    object("inline_keyboard",
-           JsonInlineKeyboard(static_cast<const td_api::replyMarkupInlineKeyboard *>(reply_markup_)));
+    object("inline_keyboard", JsonInlineKeyboard(inline_reply_markup));
+    if (inline_reply_markup->force_reply_) {
+      object("force_reply", td::JsonTrue());
+    }
   }
 
  private:

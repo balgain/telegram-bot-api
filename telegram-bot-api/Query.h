@@ -218,19 +218,11 @@ class JsonQueryError final : public td::Jsonable {
       const td::FlatHashMap<td::string, td::unique_ptr<td::VirtuallyJsonable>> &parameters = empty_parameters)
       : error_code_(error_code), description_(description), parameters_(parameters) {
   }
-  void store(td::JsonValueScope *scope) const {
-    auto object = scope->enter_object();
-    object("ok", td::JsonFalse());
-    object("error_code", error_code_);
-    object("description", description_);
-    if (!parameters_.empty()) {
-      object("parameters", JsonParameters(parameters_));
-    }
-  }
+  void store(td::JsonValueScope *scope) const;
 
  private:
   int error_code_;
-  td::Slice description_;
+  td::CSlice description_;
   const td::FlatHashMap<td::string, td::unique_ptr<td::VirtuallyJsonable>> &parameters_;
 };
 

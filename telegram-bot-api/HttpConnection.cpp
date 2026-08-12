@@ -87,7 +87,7 @@ void HttpConnection::send_response(int http_status_code, td::BufferSlice &&conte
   send_closure(std::move(connection_), &td::HttpInboundConnection::write_ok);
 }
 
-void HttpConnection::send_http_error(int http_status_code, td::Slice description) {
+void HttpConnection::send_http_error(int http_status_code, td::CSlice description) {
   send_response(http_status_code, td::json_encode<td::BufferSlice>(JsonQueryError(http_status_code, description)), 0);
 }
 

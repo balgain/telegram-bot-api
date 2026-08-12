@@ -46,7 +46,7 @@ class HttpConnection final : public td::HttpInboundConnection::Callback {
 
   void send_response(int http_status_code, td::BufferSlice &&content, int retry_after);
 
-  void send_http_error(int http_status_code, td::Slice description);
+  void send_http_error(int http_status_code, td::CSlice description);
 };
 
 }  // namespace telegram_bot_api

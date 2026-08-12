@@ -1089,22 +1089,22 @@ class Client final : public WebhookActor::Callback {
 
   void fail_query_flood_limit_exceeded(PromisedQueryPtr &&query);
 
-  void fail_query_conflict(td::Slice message, PromisedQueryPtr &&query);
+  void fail_query_conflict(td::CSlice message, PromisedQueryPtr &&query);
 
   struct ClosingError {
     int code;
     int retry_after;
-    td::Slice message;
+    td::CSlice message;
   };
   ClosingError get_closing_error();
 
   static int get_retry_after_time(td::Slice error_message);
 
-  static void fail_query_with_error(PromisedQueryPtr query, int32 error_code, td::Slice error_message,
-                                    td::Slice default_message = td::Slice());
+  static void fail_query_with_error(PromisedQueryPtr query, int32 error_code, td::CSlice error_message,
+                                    td::CSlice default_message = td::CSlice());
 
   static void fail_query_with_error(PromisedQueryPtr &&query, object_ptr<td_api::error> error,
-                                    td::Slice default_message = td::Slice());
+                                    td::CSlice default_message = td::CSlice());
 
   static bool is_special_error_code(int32 error_code);
 

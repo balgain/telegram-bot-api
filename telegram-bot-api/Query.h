@@ -214,7 +214,7 @@ class JsonQueryOk final : public td::Jsonable {
 class JsonQueryError final : public td::Jsonable {
  public:
   JsonQueryError(
-      int error_code, td::Slice description,
+      int error_code, td::CSlice description,
       const td::FlatHashMap<td::string, td::unique_ptr<td::VirtuallyJsonable>> &parameters = empty_parameters)
       : error_code_(error_code), description_(description), parameters_(parameters) {
   }
@@ -269,7 +269,7 @@ void answer_query(const Jsonable &result, PromisedQueryPtr query, td::Slice desc
 }
 
 inline void fail_query(
-    int http_status_code, td::Slice description, PromisedQueryPtr query,
+    int http_status_code, td::CSlice description, PromisedQueryPtr query,
     const td::FlatHashMap<td::string, td::unique_ptr<td::VirtuallyJsonable>> &parameters = empty_parameters) {
   query->set_error(http_status_code,
                    td::json_encode<td::BufferSlice>(JsonQueryError(http_status_code, description, parameters)));

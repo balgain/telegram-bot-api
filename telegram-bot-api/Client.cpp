@@ -70,8 +70,8 @@ int Client::get_retry_after_time(td::Slice error_message) {
   return 0;
 }
 
-void Client::fail_query_with_error(PromisedQueryPtr query, int32 error_code, td::Slice error_message,
-                                   td::Slice default_message) {
+void Client::fail_query_with_error(PromisedQueryPtr query, int32 error_code, td::CSlice error_message,
+                                   td::CSlice default_message) {
   if (error_code == 429) {
     auto retry_after_time = get_retry_after_time(error_message);
     if (retry_after_time > 0) {
@@ -207,7 +207,7 @@ void Client::fail_query_with_error(PromisedQueryPtr query, int32 error_code, td:
 }
 
 void Client::fail_query_with_error(PromisedQueryPtr &&query, object_ptr<td_api::error> error,
-                                   td::Slice default_message) {
+                                   td::CSlice default_message) {
   fail_query_with_error(std::move(query), error->code_, error->message_, default_message);
 }
 
@@ -17458,18 +17458,17 @@ td::Status Client::do_edit_ephemeral_message(object_ptr<td_api::InputMessageCont
 
 void Client::abort_long_poll(bool from_set_webhook) {
   if (long_poll_query_) {
-    td::Slice message;
+    td::CSlice message;
     if (from_set_webhook) {
-      message = td::Slice("Conflict: terminated by setWebhook request");
+      message = "Conflict: terminated by setWebhook request";
     } else {
-      message = td::Slice(
-          "Conflict: terminated by other getUpdates request; make sure that only one bot instance is running");
+      message = "Conflict: terminated by other getUpdates request; make sure that only one bot instance is running";
     }
     fail_query_conflict(message, std::move(long_poll_query_));
   }
 }
 
-void Client::fail_query_conflict(td::Slice message, PromisedQueryPtr &&query) {
+void Client::fail_query_conflict(td::CSlice message, PromisedQueryPtr &&query) {
   auto now = td::Time::now_cached();
   if (now >= next_get_updates_conflict_time_) {
     fail_query(409, message, std::move(query));

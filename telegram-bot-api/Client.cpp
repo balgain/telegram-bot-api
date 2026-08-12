@@ -108,9 +108,9 @@ void Client::fail_query_with_error(PromisedQueryPtr query, int32 error_code, td:
       error_message = default_message;
     }
     if (error_message == "MESSAGE_NOT_MODIFIED") {
-      error_message = td::Slice(
+      error_message =
           "message is not modified: specified new message content and reply markup are exactly the same as a current "
-          "content and reply markup of the message");
+          "content and reply markup of the message";
     } else if (error_message == "WC_CONVERT_URL_INVALID" || error_message == "EXTERNAL_URL_INVALID") {
       error_message = "Wrong HTTP URL specified";
     } else if (error_message == "WEBPAGE_CURL_FAILED") {
@@ -120,37 +120,37 @@ void Client::fail_query_with_error(PromisedQueryPtr query, int32 error_code, td:
     } else if (error_message == "MEDIA_GROUPED_INVALID") {
       error_message = "Can't use the media of the specified type in the album";
     } else if (error_message == "REPLY_MARKUP_TOO_LONG") {
-      error_message = td::Slice("reply markup is too long");
+      error_message = "reply markup is too long";
     } else if (error_message == "INPUT_USER_DEACTIVATED") {
       error_code = 403;
-      error_message = td::Slice("Forbidden: user is deactivated");
+      error_message = "Forbidden: user is deactivated";
     } else if (error_message == "USER_IS_BLOCKED") {
       error_code = 403;
-      error_message = td::Slice("bot was blocked by the user");
+      error_message = "bot was blocked by the user";
     } else if (error_message == "USER_ADMIN_INVALID") {
       error_code = 400;
-      error_message = td::Slice("user is an administrator of the chat");
+      error_message = "user is an administrator of the chat";
     } else if (error_message == "File generation failed") {
       error_code = 400;
-      error_message = td::Slice("can't upload file by URL");
+      error_message = "can't upload file by URL";
     } else if (error_message == "CHAT_ABOUT_NOT_MODIFIED") {
       error_code = 400;
-      error_message = td::Slice("chat description is not modified");
+      error_message = "chat description is not modified";
     } else if (error_message == "PACK_SHORT_NAME_INVALID") {
       error_code = 400;
-      error_message = td::Slice("invalid sticker set name is specified");
+      error_message = "invalid sticker set name is specified";
     } else if (error_message == "PACK_SHORT_NAME_OCCUPIED") {
       error_code = 400;
-      error_message = td::Slice("sticker set name is already occupied");
+      error_message = "sticker set name is already occupied";
     } else if (error_message == "STICKER_EMOJI_INVALID") {
       error_code = 400;
-      error_message = td::Slice("invalid sticker emojis");
+      error_message = "invalid sticker emojis";
     } else if (error_message == "QUERY_ID_INVALID") {
       error_code = 400;
-      error_message = td::Slice("query is too old and response timeout expired or query ID is invalid");
+      error_message = "query is too old and response timeout expired or query ID is invalid";
     } else if (error_message == "MESSAGE_DELETE_FORBIDDEN") {
       error_code = 400;
-      error_message = td::Slice("message can't be deleted");
+      error_message = "message can't be deleted";
     } else if (error_message == "RANK_CHANGE_FORBIDDEN" || error_message == "RANK_EMOJI_NOT_ALLOWED" ||
                error_message == "RANK_INVALID") {
       error_code = 400;
@@ -165,17 +165,17 @@ void Client::fail_query_with_error(PromisedQueryPtr query, int32 error_code, td:
   td::Slice prefix;
   switch (error_code) {
     case 400:
-      prefix = td::Slice("Bad Request");
+      prefix = "Bad Request";
       break;
     case 401:
-      prefix = td::Slice("Unauthorized");
+      prefix = "Unauthorized";
       break;
     case 403:
-      prefix = td::Slice("Forbidden");
+      prefix = "Forbidden";
       break;
     case 500:
-      prefix = td::Slice("Internal Server Error");
-      if (real_error_message != td::Slice("Request aborted")) {
+      prefix = "Internal Server Error";
+      if (real_error_message != "Request aborted") {
         LOG(ERROR) << "Receive Internal Server Error \"" << real_error_message << "\" from " << *query;
       }
       break;
@@ -17508,7 +17508,7 @@ Client::ClosingError Client::get_closing_error() {
   if (logging_out_) {
     if (is_api_id_invalid_) {
       result.code = 401;
-      result.message = td::Slice("Unauthorized: invalid api-id/api-hash");
+      result.message = "Unauthorized: invalid api-id/api-hash";
     } else if (next_authorization_time_ > 0.0) {
       result.code = 429;
       result.retry_after = td::max(static_cast<int>(next_authorization_time_ - td::Time::now()), 0) + 1;
@@ -17519,15 +17519,15 @@ Client::ClosingError Client::get_closing_error() {
       result.message = retry_after_error_message;
     } else if (clear_tqueue_) {
       result.code = 400;
-      result.message = td::Slice("Logged out");
+      result.message = "Logged out";
     } else {
       result.code = 401;
-      result.message = td::Slice("Unauthorized");
+      result.message = "Unauthorized";
     }
   } else {
     CHECK(closing_);
     result.code = 500;
-    result.message = td::Slice("Internal Server Error: restart");
+    result.message = "Internal Server Error: restart";
   }
   return result;
 }

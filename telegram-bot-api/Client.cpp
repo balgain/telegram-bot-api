@@ -11426,12 +11426,13 @@ td::Result<td_api::object_ptr<td_api::chatAdministratorRights>> Client::get_chat
   TRY_RESULT(can_delete_stories, object.get_optional_bool_field("can_delete_stories"));
   TRY_RESULT(can_manage_direct_messages, object.get_optional_bool_field("can_manage_direct_messages"));
   TRY_RESULT(can_manage_tags, object.get_optional_bool_field("can_manage_tags"));
+  TRY_RESULT(can_send_welcome_messages, object.get_optional_bool_field("can_send_welcome_messages"));
   TRY_RESULT(is_anonymous, object.get_optional_bool_field("is_anonymous"));
   return make_object<td_api::chatAdministratorRights>(
       can_manage_chat, can_change_info, can_post_messages, can_edit_messages, can_delete_messages, can_invite_users,
       can_restrict_members, can_pin_messages, can_manage_topics, can_promote_members, can_manage_video_chats,
-      can_post_stories, can_edit_stories, can_delete_stories, can_manage_direct_messages, can_manage_tags, false,
-      is_anonymous);
+      can_post_stories, can_edit_stories, can_delete_stories, can_manage_direct_messages, can_manage_tags,
+      can_send_welcome_messages, is_anonymous);
 }
 
 td::Result<td_api::object_ptr<td_api::chatAdministratorRights>> Client::get_chat_administrator_rights(
@@ -16381,18 +16382,19 @@ td::Status Client::process_promote_chat_member_query(PromisedQueryPtr &query) {
   auto can_delete_stories = to_bool(query->arg("can_delete_stories"));
   auto can_manage_direct_messages = to_bool(query->arg("can_manage_direct_messages"));
   auto can_manage_tags = to_bool(query->arg("can_manage_tags"));
+  auto can_send_welcome_messages = to_bool(query->arg("can_send_welcome_messages"));
   auto is_anonymous = to_bool(query->arg("is_anonymous"));
   auto is_promotion = can_manage_chat || can_change_info || can_post_messages || can_edit_messages ||
                       can_delete_messages || can_invite_users || can_restrict_members || can_pin_messages ||
                       can_manage_topics || can_promote_members || can_manage_video_chats || can_post_stories ||
                       can_edit_stories || can_delete_stories || can_manage_direct_messages || can_manage_tags ||
-                      is_anonymous;
+                      can_send_welcome_messages || is_anonymous;
   auto status = make_object<td_api::chatMemberStatusAdministrator>(
       true, make_object<td_api::chatAdministratorRights>(
                 can_manage_chat, can_change_info, can_post_messages, can_edit_messages, can_delete_messages,
                 can_invite_users, can_restrict_members, can_pin_messages, can_manage_topics, can_promote_members,
                 can_manage_video_chats, can_post_stories, can_edit_stories, can_delete_stories,
-                can_manage_direct_messages, can_manage_tags, false, is_anonymous));
+                can_manage_direct_messages, can_manage_tags, can_send_welcome_messages, is_anonymous));
   check_chat(chat_id, AccessRights::Write, std::move(query),
              [this, user_id, status = std::move(status), is_promotion](int64 chat_id, PromisedQueryPtr query) mutable {
                auto chat_info = get_chat(chat_id);
@@ -18001,6 +18003,7 @@ void Client::json_store_administrator_rights(td::JsonObjectScope &object, const 
   if (chat_type == ChatType::Group || chat_type == ChatType::Supergroup) {
     object("can_manage_tags", td::JsonBool(rights->can_manage_tags_));
   }
+  object("can_send_welcome_messages", td::JsonBool(rights->can_send_welcome_messages_));
   object("is_anonymous", td::JsonBool(rights->is_anonymous_));
 }
 

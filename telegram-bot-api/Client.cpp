@@ -3601,6 +3601,15 @@ class Client::JsonUniqueGiftMessage final : public td::Jsonable {
       default:
         UNREACHABLE();
     }
+    if (!gift_->text_->text_.empty()) {
+      object("text", gift_->text_->text_);
+      if (!gift_->text_->entities_.empty()) {
+        object("entities", JsonVectorEntities(gift_->text_->entities_, client_));
+      }
+    }
+    if (gift_->is_private_) {
+      object("is_private", td::JsonTrue());
+    }
   }
 
  private:

@@ -4002,6 +4002,21 @@ class Client::JsonCommunityChatAdded final : public td::Jsonable {
   const Client *client_;
 };
 
+class Client::JsonCommunityChatJoined final : public td::Jsonable {
+ public:
+  JsonCommunityChatJoined(const td_api::messageChatJoinFromCommunity *chat_join_from_community, const Client *client)
+      : chat_join_from_community_(chat_join_from_community), client_(client) {
+  }
+  void store(td::JsonValueScope *scope) const {
+    auto object = scope->enter_object();
+    object("community", JsonCommunity(chat_join_from_community_->community_id_, client_));
+  }
+
+ private:
+  const td_api::messageChatJoinFromCommunity *chat_join_from_community_;
+  const Client *client_;
+};
+
 class Client::JsonGiveawayCreated final : public td::Jsonable {
  public:
   explicit JsonGiveawayCreated(const td_api::messageGiveawayCreated *giveaway_created)
@@ -5343,8 +5358,11 @@ void Client::JsonMessage::store(td::JsonValueScope *scope) const {
     case td_api::messageChatRemovedFromCommunity::ID:
       object("community_chat_removed", JsonEmptyObject());
       break;
-    case td_api::messageChatJoinFromCommunity::ID:
+    case td_api::messageChatJoinFromCommunity::ID: {
+      auto content = static_cast<const td_api::messageChatJoinFromCommunity *>(message_->content.get());
+      object("community_chat_joined", JsonCommunityChatJoined(content, client_));
       break;
+    }
     default:
       UNREACHABLE();
   }
@@ -18941,7 +18959,6 @@ bool Client::need_skip_update_message(int64 chat_id, const MessageInfo *message_
     case td_api::messageUpgradedGiftPurchaseOfferRejected::ID:
     case td_api::messageChatHasProtectedContentToggled::ID:
     case td_api::messageChatHasProtectedContentDisableRequested::ID:
-    case td_api::messageChatJoinFromCommunity::ID:
       return true;
     default:
       break;

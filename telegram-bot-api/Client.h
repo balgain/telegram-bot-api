@@ -1722,6 +1722,7 @@ class Client final : public WebhookActor::Callback {
   td::FlatHashMap<int64, int64> temp_to_real_bot_user_id_;
 
   td::string dir_;
+  td::string files_dir_;
   td::ActorOwn<td::ClientActor> td_client_;
   td::ActorContext context_;
   std::queue<PromisedQueryPtr> cmd_queue_;

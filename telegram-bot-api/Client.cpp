@@ -8609,6 +8609,7 @@ void Client::start_up() {
     }
   }
   dir_ = parameters_->working_directory_ + suff;
+  files_dir_ = parameters_->files_directory_ + suff;
 
   class TdCallback final : public td::TdCallback {
    public:
@@ -9401,7 +9402,8 @@ void Client::on_update_authorization_state() {
   switch (authorization_state_->get_id()) {
     case td_api::authorizationStateWaitTdlibParameters::ID: {
       for (td::string option : {"disable_network_statistics", "disable_time_adjustment_protection", "ignore_file_names",
-                                "ignore_inline_thumbnails", "reuse_uploaded_photos_by_hash", "use_storage_optimizer"}) {
+                                "ignore_inline_thumbnails", "reuse_uploaded_photos_by_hash",
+                                "store_all_files_in_files_directory", "use_storage_optimizer"}) {
         send_request(make_object<td_api::setOption>(option, make_object<td_api::optionValueBoolean>(true)),
                      td::make_unique<TdOnOkCallback>());
       }
@@ -9409,6 +9411,7 @@ void Client::on_update_authorization_state() {
       auto request = make_object<td_api::setTdlibParameters>();
       request->use_test_dc_ = is_test_dc_;
       request->database_directory_ = dir_;
+      request->files_directory_ = files_dir_;
       //request->use_file_database_ = false;
       //request->use_chat_info_database_ = false;
       //request->use_secret_chats_ = false;
@@ -9999,13 +10002,15 @@ void Client::on_closed() {
   if (logging_out_) {
     parameters_->shared_data_->webhook_db_->erase(bot_token_with_dc_);
 
-    td::Scheduler::instance()->run_on_scheduler(SharedData::get_file_gc_scheduler_id(),
-                                                [actor_id = actor_id(this), dir = dir_](td::Unit) {
-                                                  CHECK(dir.size() >= 24);
-                                                  CHECK(dir.back() == TD_DIR_SLASH);
-                                                  td::rmrf(dir).ignore();
-                                                  send_closure(actor_id, &Client::finish_closing);
-                                                });
+    td::Scheduler::instance()->run_on_scheduler(
+        SharedData::get_file_gc_scheduler_id(),
+        [actor_id = actor_id(this), dir = dir_, files_dir = files_dir_](td::Unit) {
+          CHECK(dir.size() >= 24);
+          CHECK(dir.back() == TD_DIR_SLASH);
+          td::rmrf(dir).ignore();
+          td::rmrf(files_dir).ignore();
+          send_closure(actor_id, &Client::finish_closing);
+        });
     return;
   }
 
@@ -17959,7 +17964,7 @@ void Client::json_store_file(td::JsonObjectScope &object, const td_api::file *fi
         object("file_path", td::JsonRawString(file->local_->path_));
       }
     } else {
-      td::Slice relative_path = td::PathView::relative(file->local_->path_, dir_, true);
+      td::Slice relative_path = td::PathView::relative(file->local_->path_, files_dir_, true);
       if (!relative_path.empty() && file->local_->downloaded_size_ <= MAX_DOWNLOAD_FILE_SIZE) {
         object("file_path", relative_path);
       }
